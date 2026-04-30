@@ -1,0 +1,30 @@
+TITLE: Phase 2 Randomized Controlled Trial of SAN-4891 in Moderate-to-Severe COPD: Efficacy and Safety at 52 Weeks
+AUTHORS: Moreau, S., Fitzgerald, D., Okonkwo, B., Larsson, E., Tanaka, H.
+YEAR: 2022
+JOURNAL: The Lancet Respiratory Medicine
+---
+
+ABSTRACT
+Chronic obstructive pulmonary disease (COPD) affects over 300 million individuals worldwide and remains a leading cause of morbidity and mortality. SAN-4891 is a novel inhaled phosphodiesterase-4 (PDE4) inhibitor formulated for once-daily delivery via dry powder inhaler (DPI). This double-blind, placebo-controlled Phase 2 trial evaluated the efficacy and safety of SAN-4891 in patients with moderate-to-severe COPD over 52 weeks.
+
+INTRODUCTION
+PDE4 inhibition reduces intracellular cyclic AMP degradation in airway smooth muscle and immune cells, resulting in bronchodilation and attenuation of the inflammatory cascade central to COPD pathophysiology. Oral roflumilast, an approved PDE4 inhibitor, demonstrated significant reduction in exacerbation rates but is associated with systemic adverse effects including nausea, weight loss, and diarrhea. An inhaled formulation targeting the lung with reduced systemic exposure could maintain efficacy while improving tolerability.
+
+METHODS
+A total of 412 patients with moderate-to-severe COPD (post-bronchodilator FEV1/FVC < 0.70; FEV1 40–80% predicted) were randomized 1:1:1 to SAN-4891 200 μg, SAN-4891 400 μg, or placebo, each delivered via DPI once daily for 52 weeks. The primary endpoint was rate of moderate-to-severe COPD exacerbations per patient-year. Secondary endpoints included change from baseline in pre-bronchodilator FEV1 at week 52, St. George's Respiratory Questionnaire (SGRQ) score, and safety.
+
+RESULTS
+SAN-4891 400 μg significantly reduced the annualized exacerbation rate versus placebo (rate ratio 0.64, 95% CI 0.51–0.80, p < 0.001). SAN-4891 200 μg showed a non-significant trend (rate ratio 0.82, 95% CI 0.66–1.01, p = 0.065). The 400 μg dose improved pre-bronchodilator FEV1 by a mean of 87 mL (95% CI 52–122 mL) versus placebo at week 52. SGRQ total score improved by 4.8 units (clinically meaningful threshold: ≥4 units) in the 400 μg group versus 1.1 units in placebo (p = 0.003).
+
+Systemic PDE4-related adverse events were notably lower compared with historical roflumilast data: nausea occurred in 8.0% of patients on SAN-4891 400 μg versus 2.2% placebo; weight change was minimal (−0.3 kg versus +0.1 kg). No clinically meaningful changes in cardiovascular or psychiatric parameters were observed. Serious adverse events occurred in 12.4%, 11.8%, and 14.6% of the 200 μg, 400 μg, and placebo groups, respectively.
+
+CONCLUSIONS
+SAN-4891 400 μg once daily via DPI significantly reduced COPD exacerbations and improved lung function and quality of life over 52 weeks, with an improved tolerability profile relative to oral PDE4 inhibitors. These results support advancement to Phase 3 investigation. A Phase 3 program (CLARITY-COPD) is being designed for initiation in Q2 2024.
+
+SAFETY NOTE
+This document is an academic summary for R&D purposes. Treatment decisions for individual patients must be made by licensed healthcare professionals based on complete prescribing information, patient history, and clinical judgment.
+
+REFERENCES
+1. Fabbri LM et al. Roflumilast in moderate-to-severe COPD. Lancet. 2009.
+2. Calverley PM et al. Roflumilast in symptomatic COPD. Lancet. 2009.
+3. Singh D et al. Inhaled PDE4 inhibitor GSK256066 attenuates allergen challenge in asthma. Clin Pharmacol Ther. 2010.

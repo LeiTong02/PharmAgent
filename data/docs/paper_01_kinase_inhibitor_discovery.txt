@@ -1,0 +1,33 @@
+TITLE: Discovery and Optimization of Selective EGFR Kinase Inhibitors for Non-Small Cell Lung Cancer
+AUTHORS: Chen, L., Patel, R., Nakamura, T., Hoffmann, K., Reyes, M.
+YEAR: 2023
+JOURNAL: Journal of Medicinal Chemistry
+---
+
+ABSTRACT
+Epidermal growth factor receptor (EGFR) mutations drive approximately 15% of non-small cell lung cancer (NSCLC) cases in Western populations and up to 50% in East Asian cohorts. Despite the clinical success of first- and second-generation EGFR inhibitors, acquired resistance through the T790M gatekeeper mutation remains a significant challenge. This study describes the rational design, synthesis, and biological evaluation of a novel series of covalent EGFR inhibitors with improved selectivity over wild-type EGFR.
+
+INTRODUCTION
+EGFR belongs to the ErbB family of receptor tyrosine kinases and plays a critical role in cell proliferation, survival, and differentiation. Activating mutations in exons 19 and 21 (L858R) confer sensitivity to first-generation inhibitors such as erlotinib and gefitinib. However, approximately 60% of patients who develop resistance harbor the T790M secondary mutation, which restores ATP affinity and sterically hinders first-generation drugs.
+
+Third-generation inhibitors such as osimertinib exploit the T790M mutation by forming covalent bonds with the C797 residue via a Michael acceptor warhead. While osimertinib has shown superior outcomes, resistance again emerges through C797S mutations and EGFR-independent bypass mechanisms. This underscores the need for novel chemotypes.
+
+RESULTS AND DISCUSSION
+We synthesized 42 compounds based on a 2-aminopyrimidine scaffold decorated with varying electrophilic warheads at the C-4 position. Lead compound SR-0472 demonstrated IC50 values of 3.2 nM against EGFR L858R/T790M and 847 nM against wild-type EGFR, yielding a selectivity ratio of 265-fold. This selectivity profile is superior to osimertinib (selectivity ratio ~32) in our comparative assays.
+
+Structural studies via X-ray crystallography confirmed covalent bond formation between SR-0472 and C797 of EGFR. The acrylamide warhead adopts a productive geometry within the ATP-binding cleft, with the pyrimidine core making key hydrogen bond contacts with the hinge residues M793 and Q791.
+
+Cellular potency was assessed in NCI-H1975 cells (EGFR L858R/T790M). SR-0472 inhibited cell proliferation with an EC50 of 18.4 nM over 72 hours. A Ba/F3 cell panel confirmed selectivity, with IC50 > 5,000 nM observed against 12 of 15 off-target kinases screened.
+
+In vitro ADME profiling showed a metabolic half-life of 87 minutes in human liver microsomes, moderate plasma protein binding (91%), and good aqueous solubility (78 μg/mL). Permeability was excellent in Caco-2 assays (Papp A→B = 18.3 × 10⁻⁶ cm/s) with an efflux ratio of 1.4, suggesting low P-gp liability.
+
+PHARMACOKINETICS IN RODENTS
+Mouse PK studies at 10 mg/kg oral dose yielded a Cmax of 1,240 ng/mL, AUC(0-inf) of 4,870 ng·h/mL, oral bioavailability of 58%, and a half-life of 4.8 hours. These parameters support once-daily dosing.
+
+CONCLUSIONS
+SR-0472 represents a promising lead for third-generation EGFR inhibitor development. Its exceptional selectivity for mutant over wild-type EGFR may reduce mechanism-based toxicities associated with wild-type EGFR inhibition (e.g., rash, diarrhea). Further optimization of metabolic stability and evaluation of antitumor activity in xenograft models are ongoing. SR-0472 has been advanced to IND-enabling studies.
+
+REFERENCES
+1. Yun CH et al. Structures of lung cancer-derived EGFR mutants and inhibitor complexes. Cancer Cell. 2007.
+2. Cross DA et al. AZD9291, an irreversible EGFR TKI, overcomes T790M-mediated resistance. Cancer Discov. 2014.
+3. Thress KS et al. Acquired EGFR C797S mutation mediates resistance to AZD9291. Nat Med. 2015.

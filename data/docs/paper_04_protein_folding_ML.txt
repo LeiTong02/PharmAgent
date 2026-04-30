@@ -1,0 +1,30 @@
+TITLE: Machine Learning-Guided Protein Structure Prediction Accelerates Target Identification in Rare Metabolic Diseases
+AUTHORS: Gupta, S., Ferreira, A., Okafor, N., Zimmermann, R., Park, J.
+YEAR: 2024
+JOURNAL: Cell Chemical Biology
+---
+
+ABSTRACT
+Target identification in rare metabolic diseases is constrained by the limited availability of structural data for orphan enzymes. We report a pipeline integrating AlphaFold2-derived structural models with molecular dynamics (MD) simulations and machine learning-based binding site prediction to identify druggable pockets in 12 orphan enzymes implicated in lysosomal storage disorders (LSDs). For three enzymes lacking prior structural data, we successfully identified cryptic allosteric sites and validated them experimentally using differential scanning fluorimetry (DSF) and fragment-based screening.
+
+INTRODUCTION
+Lysosomal storage disorders collectively affect 1 in 5,000 live births. Each individual disorder is rare, limiting investment in traditional drug discovery. Enzyme replacement therapy (ERT) is available for only a subset of LSDs and carries significant immunogenicity and delivery challenges. Small-molecule chaperone therapy—stabilizing misfolded mutant enzymes—represents a complementary approach, but requires structural understanding of the target enzyme's active and allosteric sites.
+
+Prior to AlphaFold2, structural characterization of orphan enzymes required years of crystallographic or cryo-EM work. The transformative accuracy of AlphaFold2 predictions (median TM-score 0.92 on CASP14 benchmark) now enables rapid virtual screening campaigns.
+
+PIPELINE DESCRIPTION
+Step 1 — Structure Prediction: AlphaFold2 was run on 12 orphan LSD enzyme sequences, each generating 5 model candidates. Models with pLDDT > 90 in the predicted active site region were selected (10 of 12 enzymes met this threshold). Step 2 — MD Simulation: 500 ns explicit-solvent MD simulations (AMBER22 force field) were performed for each selected model to sample conformational space and identify transient pockets. Step 3 — Binding Site Detection: Three algorithms (FPocket, SiteMap, and a custom GNN-based predictor) were applied to 1,000 snapshots per trajectory. Consensus sites with druggability scores > 0.7 in all three methods were advanced. Step 4 — Virtual Screening: Enamine REAL space library (3.7 billion compounds) was docked using Glide XP against consensus pockets.
+
+KEY FINDINGS
+For GLA (alpha-galactosidase A, target in Fabry disease), our pipeline identified a cryptic allosteric site 18 Å from the active site that is only accessible in 12% of MD snapshots. A hit compound (ML-GLA-001) was confirmed to stabilize the Y98H pathogenic variant by 6.2°C in DSF (n=3, p < 0.001) and to rescue lysosomal enzyme activity to 38% of wild-type levels in patient-derived fibroblasts. For GBA1 (glucocerebrosidase, target in Gaucher disease), three allosteric hits were identified and confirmed by hydrogen-deuterium exchange mass spectrometry (HDX-MS). For GALC (galactocerebrosidase, target in Krabbe disease), structural quality was insufficient (pLDDT < 70 in two key loop regions) and experimental structure determination is ongoing.
+
+COMPUTATIONAL EFFICIENCY
+The entire pipeline from sequence input to ranked virtual screening hits required 11 days of GPU computing time on an NVIDIA A100 cluster (64-GPU node). This compares favorably to the 18–36 months typically required for traditional crystallographic target characterization.
+
+CONCLUSIONS
+ML-guided structural prediction combined with MD sampling provides a rapid and experimentally validated path to druggable site identification in rare disease targets. Integration of experimental biophysical validation (DSF, HDX-MS, fragment screening) is critical to filter computational false positives. The pipeline is being extended to additional enzyme families and to proteolysis-targeting chimera (PROTAC) warhead placement optimization.
+
+REFERENCES
+1. Jumper J et al. Highly accurate protein structure prediction with AlphaFold. Nature. 2021.
+2. Halgren T. Identifying and characterizing binding sites and assessing druggability. J Chem Inf Model. 2009.
+3. Hughes JP et al. Principles of early drug discovery. Br J Pharmacol. 2011.

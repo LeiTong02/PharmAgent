@@ -1,0 +1,35 @@
+TITLE: Standardization of High-Throughput Screening Assay Protocols for Kinase Inhibitor Profiling: Best Practices and Quality Metrics
+AUTHORS: Oduya, F., Bernstein, H., Saito, K., Meier, L., Castellano, R.
+YEAR: 2022
+JOURNAL: SLAS Discovery
+---
+
+ABSTRACT
+High-throughput screening (HTS) of kinase inhibitors requires robust, reproducible assay platforms capable of processing tens of thousands of compounds with low false-positive and false-negative rates. This methods paper describes standardized protocols for three kinase assay formats—TR-FRET, AlphaScreen, and radiometric filter binding—along with statistical quality metrics (Z′-factor, signal-to-background, coefficient of variation) and guidance on hit selection thresholds. We report Z′-factors consistently ≥ 0.72 across 14 kinase targets and present a case study of a 48,000-compound screen against CDK4/Cyclin D1.
+
+INTRODUCTION
+Protein kinases constitute the largest druggable enzyme class in the human genome, with 518 kinases encoded. Kinase dysregulation underlies oncological, inflammatory, and metabolic diseases. HTS campaigns generate primary hit lists that feed medicinal chemistry optimization pipelines; assay quality directly determines downstream resource allocation. A Z′-factor ≥ 0.5 is generally considered the minimum threshold for a useful assay; our laboratory targets Z′ ≥ 0.7 for all primary screening campaigns.
+
+ASSAY FORMATS
+TR-FRET (Time-Resolved Fluorescence Energy Transfer): Lanthanide-based donor-acceptor systems offer high sensitivity and low background, suitable for compounds with inherent fluorescence. Typical S/B ratio 15–45. Recommended for tyrosine kinases and low-turnover serine/threonine kinases.
+
+AlphaScreen: Bead-based proximity assay with low reagent consumption. Susceptible to compound interference via singlet oxygen quenching ("hook effect" at high compound concentrations). Requires confirmatory orthogonal assay. Z′-factor range across 14 kinases: 0.72–0.91.
+
+Radiometric Filter Binding (33P-ATP): Gold standard for selectivity profiling. Higher cost and radioactive waste management required. Preferred for comprehensive kinase panel profiling (KINOMEscan equivalent).
+
+QUALITY CONTROL METRICS AND ACCEPTANCE CRITERIA
+Per-plate QC was applied to all HTS runs: Z′ ≥ 0.5 (pass), Z′ ≥ 0.7 (excellent). Plates below Z′ = 0.5 were re-run. Signal-to-background ≥ 5 required for all primary screens. Inter-plate coefficient of variation (CV) for positive control: < 15%. Compound concentration in primary screen: 10 μM single concentration. Hit threshold: ≥ 50% inhibition at 10 μM.
+
+CDK4/CYCLIN D1 CASE STUDY
+A 48,000-compound diversity library was screened at 10 μM using TR-FRET against CDK4/Cyclin D1 complex. Primary screen identified 1,247 hits (2.6% hit rate). After removing pan-assay interference compounds (PAINS) using structural filters and confirming with AlphaScreen orthogonal assay, 384 confirmed hits remained. Dose-response profiling (8-point, 3-fold dilution from 30 μM) yielded 217 compounds with IC50 < 1 μM. Structural clustering identified 12 distinct chemotypes for progression to medicinal chemistry.
+
+STATISTICAL GUIDANCE ON HIT SELECTION
+For primary screens, a ≥ 3 standard deviation threshold above mean DMSO control (typically equating to ≥ 50% inhibition at 10 μM) is recommended. Strict cutoffs may increase false negatives for partial inhibitors; compound context (known scaffolds, structural alerts) should modulate thresholds. Cherry-picking and confirmatory IC50 determination should be performed within 2 weeks of primary screen to minimize compound degradation.
+
+CONCLUSIONS
+Standardized protocols and rigorous quality metrics enable consistent, high-quality kinase HTS campaigns. The described TR-FRET protocol has been validated across 14 kinase targets with Z′ ≥ 0.72. Incorporation of PAINS filters and orthogonal confirmation significantly reduces false-positive rates from primary screens. Full assay protocols and statistical templates are available as supplementary materials.
+
+REFERENCES
+1. Zhang JH et al. A simple statistical parameter for use in evaluation and validation of high throughput screening assays. J Biomol Screen. 1999.
+2. Baell JB, Holloway GA. New substructure filters for removal of pan assay interference compounds. J Med Chem. 2010.
+3. Fabian MA et al. A small molecule-kinase interaction map for clinical kinase inhibitors. Nat Biotechnol. 2005.
