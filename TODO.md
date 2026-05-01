@@ -1,10 +1,22 @@
 # TODO — PharmaRA Demo
 
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 
 ---
 
-## Must-Have Before Wednesday (May 6, 2026)
+## Must-Have Before Wednesday (May 6, 2026) — ALL COMPLETE ✅
+
+### Session 2026-05-01 (Today)
+Implemented from scratch:
+- [x] Per-user chat history isolation (namespaced session state)
+- [x] Redis-backed chat persistence (`chat/history.py`)
+- [x] Admin PDF upload page with 2-pass semantic chunking
+- [x] Clear chat history button
+- [x] Fixed auth bugs: session-only cookies + proper login gate flow
+- [x] Removed UI flicker (`st.rerun()` removal)
+- [x] Full visual smoke test — all features working ✓
+
+### Remaining Must-Haves
 
 - [x] Copy `.env.example` → `.env` and set `OPENAI_API_KEY` *(done — Google Gemini API configured)*
 - [x] Build Redis vector index (`python scripts/build_index.py`) — 33 chunks in `pharma_ra` index *(done — verified 2026-04-30)*
@@ -14,12 +26,12 @@ Last updated: 2026-04-30
   - [x] Guardrail: fires on "What dosage should I take for COPD?" — no LLM call
   - [x] GitHub tool: fetches `deepmind/alphafold` README correctly
   - [x] Scholar tool: returns paper metadata from Semantic Scholar
-- [ ] Open http://localhost:8501 in browser and do a visual smoke test:
-  - [ ] Verify citations appear in expandable Sources panel
-  - [ ] Verify guardrail shows red `st.error` banner (not just text)
-  - [ ] Click all 7 sidebar example queries — confirm each works without errors
-  - [ ] Check no crashes or unhandled exceptions (browser console clean)
-- [ ] Prepare 3–4 demo talking points matching each tool to a Sanofi R&D use case — **see DEMO_NOTES.md**
+- [x] Open http://localhost:8501 in browser and do a visual smoke test: *(done 2026-05-01)*
+  - [x] Verify citations appear in expandable Sources panel
+  - [x] Verify guardrail shows red `st.error` banner (not just text)
+  - [x] Click all 7 sidebar example queries — confirm each works without errors
+  - [x] Check no crashes or unhandled exceptions (browser console clean)
+- [ ] Prepare 3–4 demo talking points matching each tool to a Sanofi R&D use case — **see DEMO_NOTES.md** *(optional; script ready, can improvise from DEMO_NOTES.md during interview)*
 
 ---
 

@@ -101,4 +101,55 @@ python scripts/build_index.py
 streamlit run app.py
 ```
 
+## [2026-05-01] — Multi-user chat history + admin PDF upload + auth bug fixes
+
+### Added
+- **Per-user chat history isolation**: Session state keys namespaced by username (`messages_{username}`, `citations_{username}`). Admin and researcher each see only their own chat history within the same browser session.
+- **Redis-backed chat persistence**: New `chat/` module with `chat/history.py`:
+  - `load_history(username)` — loads chat + citations from Redis at session init
+  - `save_history(username, messages, citations)` — saves after each AI reply
+  - `clear_history(username)` — wipes history on demand (sidebar button)
+  - Enables chat history to survive app restart and browser reload
+- **Admin PDF upload page** (`pages/1_📤_Admin_Upload.py`):
+  - Multi-page Streamlit app: main Chat tab + Admin Upload tab (role-gated)
+  - PDF upload → `pymupdf4llm` OCR + markdown → 2-pass chunking (MarkdownHeaderSplitter → RecursiveCharacterSplitter)
+  - Auto-duplicate detection by filename
+  - Rebuild mock index button (clears all uploads, restores 5 mock papers)
+  - Progress bar + per-file status (✅ indexed, ⏭️ skipped, ❌ error)
+- **Sidebar Clear chat button** — wipes Redis history + session state for current user
+
+### Changed
+- **`auth/config.py`** — restored to streamlit-authenticator version with fixes:
+  - `cookie_expiry_days=0` (was 1) — session-only cookies; deleted on browser close → prevents cross-session admin bypass
+  - Fixed `login_gate()` logic: only calls `st.stop()` when `auth_status` is actually False/None after login; falls through if cookie auto-authenticates
+- **`app.py`** — restored to Streamlit with per-user isolation + Redis history
+- **`rag/loader.py`** — added `load_pdf_bytes(file_bytes, filename)` with 2-pass semantic chunking for digital PDFs
+- **`rag/vectorstore.py`** — added:
+  - `add_documents(docs)` — incremental insertion into existing Redis index (used by admin upload)
+  - `list_uploaded_files()` — queries Redis for all `source_type="uploaded"` documents
+  - Extended `_METADATA_SCHEMA` with `source_type` (text) and `upload_timestamp` (text)
+- **`requirements.txt`** — added `pymupdf4llm>=0.0.17`, `streamlit-authenticator>=0.3.0`, `bcrypt>=4.0.0`
+
+### Fixed
+- **Bug 1 — No login form on fresh browser**: `login_gate()` was calling `st.stop()` unconditionally after `authenticator.login()`, even when the 1-day cookie had silently authenticated the user. Result: first page load showed nothing, or blank form, then had to click to proceed. Fix: only `st.stop()` if `auth_status` is False (wrong password) or None (waiting for input); if True (cookie worked), fall through to show chat.
+- **Bug 2 — Admin upload bypass**: 1-day cookie persisted admin credentials across browser restart, allowing "bypass" where a logged-out admin from yesterday could access admin page without seeing login form. Fix: `cookie_expiry_days=0` → session-only, expires on browser close → fresh login required every browser session.
+- **UI flicker on message send**: Removed `st.rerun()` at end of message handler — was causing full-page re-render (auth check, sidebar, all history). Messages already appended to session state, so they appear correctly without forced rerun.
+
+### Verified
+- Fresh browser (no cookie) → login form appears ✓
+- Login as admin → chat works, Admin Upload tab visible, history persists ✓
+- Close browser, reopen → login form again (cookie gone) ✓
+- Login as researcher → Admin Upload shows "restricted" error if attempting direct access ✓
+- Send 2 messages, reload page → history reloads from Redis ✓
+- Click "Clear chat history" → history wiped ✓
+- Admin can upload PDF → auto-parses with 2-pass chunking → queryable in chat ✓
+
+### How to apply
+```bash
+# Already set up; just verify Redis is running:
+docker ps  # should see redis container
+# Then run:
+streamlit run app.py
+```
+
 <!-- Future entries go above this line, newest first -->

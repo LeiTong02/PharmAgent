@@ -6,3 +6,4 @@ __pycache__/
 .DEMO_NOTES.md
 .claude/
 .vscode/
+test_dir/
