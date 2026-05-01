@@ -11,6 +11,8 @@ _METADATA_SCHEMA = [
     {"name": "year", "type": "text"},
     {"name": "journal", "type": "text"},
     {"name": "source_file", "type": "text"},
+    {"name": "source_type", "type": "text"},
+    {"name": "upload_timestamp", "type": "text"},
 ]
 
 
@@ -85,3 +87,27 @@ def load_index() -> RedisVectorStore:
         _get_embeddings(),
         redis_url=_get_redis_url(),
     )
+
+
+def add_documents(docs) -> int:
+    """Append documents to the existing index. Returns the number of docs added."""
+    vs = load_index()
+    vs.add_documents(docs)
+    return len(docs)
+
+
+def list_uploaded_files() -> list[str]:
+    """Return distinct source_file names for uploaded (non-mock) documents."""
+    try:
+        r = _redis.from_url(_get_redis_url())
+        keys = r.keys(f"{INDEX_NAME}:*")
+        seen: set[str] = set()
+        for key in keys:
+            data = r.hgetall(key)
+            source_type = data.get(b"source_type", b"").decode()
+            source_file = data.get(b"source_file", b"").decode()
+            if source_type == "uploaded" and source_file:
+                seen.add(source_file)
+        return sorted(seen)
+    except Exception:
+        return []

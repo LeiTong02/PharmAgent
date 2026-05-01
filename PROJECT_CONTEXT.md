@@ -1,7 +1,7 @@
 # Project Context: Pharma Research Assistant (PharmaRA)
 
 ## Interview Target
-- **Company**: Sanofi
+- **Company**: Pharmacy Company
 - **Purpose**: Live interview demo showcasing AI/agent engineering capabilities for pharmaceutical R&D
 - **Deadline**: Wednesday May 6, 2026
 - **Demo audience**: Technical evaluators — PhD-level researchers and/or AI/ML engineers

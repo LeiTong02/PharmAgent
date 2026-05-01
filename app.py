@@ -1,6 +1,6 @@
 """Pharma Research Assistant — Streamlit UI."""
 import os
-import sys
+import re
 from pathlib import Path
 
 import streamlit as st
@@ -8,6 +8,25 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 
 load_dotenv()
+
+from chat.history import load_history, save_history, clear_history
+
+# ---------------------------------------------------------------------------
+# Page config — must be the FIRST st.* call
+# ---------------------------------------------------------------------------
+st.set_page_config(
+    page_title="PharmaRA — Pharma Research Assistant",
+    page_icon="🧬",
+    layout="wide",
+)
+
+# ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+from auth.config import build_authenticator, login_gate
+
+authenticator = build_authenticator()
+user_role = login_gate(authenticator)  # stops page if not authenticated
 
 
 def _extract_text(content) -> str:
@@ -24,15 +43,6 @@ def _extract_text(content) -> str:
         )
     return content or ""
 
-
-# ---------------------------------------------------------------------------
-# Page config
-# ---------------------------------------------------------------------------
-st.set_page_config(
-    page_title="PharmaRA — Pharma Research Assistant",
-    page_icon="🧬",
-    layout="wide",
-)
 
 # ---------------------------------------------------------------------------
 # Env check
@@ -75,6 +85,18 @@ if load_error:
 with st.sidebar:
     st.title("🧬 PharmaRA")
     st.caption("Pharmaceutical Research Assistant")
+
+    username = st.session_state.get("username", "")
+    st.caption(f"Logged in as **{username}** ({user_role})")
+    try:
+        authenticator.logout(button_name="Logout", location="sidebar")
+    except Exception:
+        pass
+    if st.button("🗑️ Clear chat history", use_container_width=True):
+        clear_history(username)
+        st.session_state[_msg_key] = []
+        st.session_state[_cite_key] = {}
+        st.rerun()
     st.divider()
 
     st.markdown("### About")
@@ -109,14 +131,17 @@ with st.sidebar:
     model = os.getenv("MODEL_NAME", "gpt-4o-mini")
     st.caption(f"Model: `{model}` · Embeddings: `{os.getenv('EMBEDDING_MODEL', 'text-embedding-3-small')}`")
 
-# ---------------------------------------------------------------------------
-# Chat state
-# ---------------------------------------------------------------------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Per-user session state keys so each account has its own isolated chat history
+_msg_key = f"messages_{username}"
+_cite_key = f"citations_{username}"
 
-if "citations" not in st.session_state:
-    st.session_state.citations = {}  # message_index → list of citation strings
+# ---------------------------------------------------------------------------
+# Chat state (namespaced per user, backed by Redis)
+# ---------------------------------------------------------------------------
+if _msg_key not in st.session_state:
+    msgs, cites = load_history(username)
+    st.session_state[_msg_key] = msgs
+    st.session_state[_cite_key] = cites
 
 # ---------------------------------------------------------------------------
 # Header
@@ -129,13 +154,12 @@ st.caption(
 # ---------------------------------------------------------------------------
 # Display chat history
 # ---------------------------------------------------------------------------
-for i, msg in enumerate(st.session_state.messages):
-    role = "user" if isinstance(msg, HumanMessage) else "assistant"
-    with st.chat_message(role):
+for i, msg in enumerate(st.session_state[_msg_key]):
+    msg_role = "user" if isinstance(msg, HumanMessage) else "assistant"
+    with st.chat_message(msg_role):
         st.markdown(_extract_text(msg.content))
-        # Show citations for assistant messages
-        if role == "assistant" and i in st.session_state.citations:
-            cites = st.session_state.citations[i]
+        if msg_role == "assistant" and i in st.session_state[_cite_key]:
+            cites = st.session_state[_cite_key][i]
             if cites:
                 with st.expander(f"📄 Sources ({len(cites)})", expanded=False):
                     for c in cites:
@@ -148,23 +172,20 @@ pending = st.session_state.pop("pending_input", None)
 user_input = pending or st.chat_input("Ask a research question...")
 
 if user_input:
-    # Display user message
     with st.chat_message("user"):
         st.markdown(user_input)
 
     human_msg = HumanMessage(content=user_input)
-    st.session_state.messages.append(human_msg)
+    st.session_state[_msg_key].append(human_msg)
 
-    # Run agent
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            state_in = {"messages": st.session_state.messages, "blocked": False}
+            state_in = {"messages": st.session_state[_msg_key], "blocked": False}
             result = graph.invoke(state_in, config={"recursion_limit": 10})
 
         final_msgs = result["messages"]
         blocked = result.get("blocked", False)
 
-        # Find the last AI message
         ai_reply = None
         for m in reversed(final_msgs):
             if isinstance(m, AIMessage) and not m.tool_calls:
@@ -181,16 +202,14 @@ if user_input:
         else:
             st.markdown(reply_text)
 
-        # Extract citations from the reply text
-        import re
         cite_matches = re.findall(r"\[Source:\s*([^\]]+)\]", reply_text)
-        citation_idx = len(st.session_state.messages)  # index of the reply we're about to append
+        citation_idx = len(st.session_state[_msg_key])
 
         if cite_matches and not blocked:
             with st.expander(f"📄 Sources ({len(set(cite_matches))})", expanded=False):
                 for c in set(cite_matches):
                     st.markdown(f"- {c}")
-            st.session_state.citations[citation_idx] = list(set(cite_matches))
+            st.session_state[_cite_key][citation_idx] = list(set(cite_matches))
 
-    st.session_state.messages.append(ai_reply)
-    st.rerun()
+    st.session_state[_msg_key].append(ai_reply)
+    save_history(username, st.session_state[_msg_key], st.session_state[_cite_key])
