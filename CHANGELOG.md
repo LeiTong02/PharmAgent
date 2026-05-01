@@ -87,4 +87,18 @@ Google's OpenAI-compatible endpoint (`https://generativelanguage.googleapis.com/
 - GitHub README fetch works for `deepmind/alphafold`
 - Scholar lookup returns paper metadata from Semantic Scholar
 
+## [2026-05-01] — Fix Gemini batch embedding bug + fix history rendering
+
+### Fixed
+- **`rag/vectorstore.py`**: `GoogleGenerativeAIEmbeddings.embed_documents()` returns only 1 vector regardless of batch size (confirmed API/wrapper bug). Added `_FixedGoogleEmbeddings` wrapper class that calls `embed_query()` per document instead. Redis index now stores all 33 chunks correctly (was: 1 key; now: 33 keys).
+- **`app.py`**: Chat history loop was calling `st.markdown(msg.content)` directly, which rendered Gemini thinking model responses as raw Python list (`[{'type': 'text', 'text': '...', 'extras': {...}}]`) instead of plain text. Extracted `_extract_text(content)` helper at module level; applied to both history rendering and new-message rendering.
+
+### How to apply after this fix
+```bash
+# Rebuild index (drops old 1-doc index, repopulates with all 33 chunks)
+python scripts/build_index.py
+# Restart Streamlit to pick up app.py changes
+streamlit run app.py
+```
+
 <!-- Future entries go above this line, newest first -->

@@ -51,7 +51,7 @@ LangGraph StateGraph
     ├── guardrail_node   → regex check → BLOCK or PASS
     ├── agent_node       → gpt-4o-mini with 4 tools bound
     └── tool_node        → dispatches to one of 4 tools:
-            ├── rag_search          → FAISS retrieval, returns context + citations
+            ├── rag_search          → Redis Stack retrieval, returns context + citations
             ├── query_assay_data    → pandas on assay_results.csv, returns markdown table
             ├── fetch_github_readme → GitHub API /repos/{owner}/{repo}/readme
             └── lookup_paper        → Semantic Scholar API → arXiv fallback → stub
@@ -74,7 +74,7 @@ LangGraph StateGraph
 | `agent/guardrails.py` | Complete | 8/8 unit tests pass |
 | `agent/prompts.py` | Complete | System prompt with citation format + safety instructions |
 | `rag/loader.py` | Complete | Parses TITLE/AUTHORS/YEAR/JOURNAL header metadata |
-| `rag/vectorstore.py` | Complete | build_index() / load_index() with FAISS |
+| `rag/vectorstore.py` | Complete | build_index() / load_index() with Redis Stack; `_FixedGoogleEmbeddings` wrapper for batch bug |
 | `rag/retriever.py` | Complete | Returns (context_str, citations_list) |
 | `scripts/build_index.py` | Complete | One-shot index builder |
 | `data/docs/*.txt` | Complete | 5 mock papers, 33 chunks total |

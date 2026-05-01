@@ -18,6 +18,23 @@ def _get_redis_url() -> str:
     return os.getenv("REDIS_URL", "redis://localhost:26379")
 
 
+class _FixedGoogleEmbeddings:
+    """Wrapper around GoogleGenerativeAIEmbeddings that fixes batch embed_documents.
+
+    The underlying API only returns 1 vector per call regardless of batch size.
+    This wrapper calls embed_query for each text individually.
+    """
+
+    def __init__(self, inner):
+        self._inner = inner
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._inner.embed_query(t) for t in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._inner.embed_query(text)
+
+
 def _get_embeddings():
     """Return the appropriate embeddings client.
 
@@ -30,10 +47,11 @@ def _get_embeddings():
         model = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
         if not model.startswith("models/"):
             model = f"models/{model}"
-        return GoogleGenerativeAIEmbeddings(
+        inner = GoogleGenerativeAIEmbeddings(
             model=model,
             google_api_key=os.getenv("OPENAI_API_KEY"),
         )
+        return _FixedGoogleEmbeddings(inner)
     return OpenAIEmbeddings(
         model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
     )

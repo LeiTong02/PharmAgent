@@ -9,6 +9,22 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 load_dotenv()
 
+
+def _extract_text(content) -> str:
+    """Extract plain text from AIMessage content.
+
+    Gemini thinking models return content as a list of typed blocks
+    e.g. [{"type": "text", "text": "...", "extras": {"signature": "..."}}].
+    This normalises both that format and plain strings to a single str.
+    """
+    if isinstance(content, list):
+        return "\n".join(
+            block["text"] for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+    return content or ""
+
+
 # ---------------------------------------------------------------------------
 # Page config
 # ---------------------------------------------------------------------------
@@ -116,7 +132,7 @@ st.caption(
 for i, msg in enumerate(st.session_state.messages):
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
     with st.chat_message(role):
-        st.markdown(msg.content)
+        st.markdown(_extract_text(msg.content))
         # Show citations for assistant messages
         if role == "assistant" and i in st.session_state.citations:
             cites = st.session_state.citations[i]
@@ -158,15 +174,7 @@ if user_input:
         if ai_reply is None:
             ai_reply = AIMessage(content="No response generated.")
 
-        # ChatGoogleGenerativeAI (thinking models) returns content as a list of blocks
-        raw = ai_reply.content
-        if isinstance(raw, list):
-            reply_text = "\n".join(
-                block["text"] for block in raw
-                if isinstance(block, dict) and block.get("type") == "text"
-            )
-        else:
-            reply_text = raw
+        reply_text = _extract_text(ai_reply.content)
 
         if blocked:
             st.error(reply_text)
