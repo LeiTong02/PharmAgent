@@ -13,10 +13,9 @@ import os
 import streamlit as st
 import streamlit_authenticator as stauth
 
-
 _COOKIE_NAME = "pharma_ra_auth"
 _COOKIE_KEY = "pharma_ra_secret_key_2026"
-_COOKIE_EXPIRY_DAYS = 1
+_COOKIE_EXPIRY_DAYS = 0  # Session-only cookie; expires when browser closes
 
 # Keys that streamlit-authenticator 0.4.x expects to exist in session state
 _REQUIRED_SESSION_KEYS = {
@@ -74,8 +73,8 @@ def build_authenticator() -> stauth.Authenticate:
 def login_gate(authenticator: stauth.Authenticate) -> str:
     """Render login form if not authenticated; return role ('admin'|'researcher') when logged in.
 
-    Calls st.stop() if the user is not authenticated, so the rest of the page
-    never executes for unauthenticated visitors.
+    Only calls st.stop() if user is actually not authenticated (not logged in and no valid cookie).
+    If cookie auto-authenticates, falls through without stopping.
     """
     auth_status = st.session_state.get("authentication_status")
 
@@ -87,10 +86,11 @@ def login_gate(authenticator: stauth.Authenticate) -> str:
 
         if auth_status is False:
             st.error("Incorrect username or password.")
+            st.stop()
         elif auth_status is None:
             st.info("Please enter your credentials.")
-
-        st.stop()
+            st.stop()
+        # If auth_status is now True (via cookie or successful login), fall through
 
     # Authenticated — determine role from username
     username = st.session_state.get("username", "")
