@@ -282,7 +282,7 @@ For more details, see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) and [CHANGELOG.md
 ## Future Roadmap
 
 - [ ] MCP integration: wrap as Claude Code MCP server
-- [ ] Real document corpus: replace mock papers with internal Sanofi docs
+- [ ] Real document corpus: replace mock papers with production research documents
 - [ ] Streaming responses: use LangChain streaming + `st.write_stream`
 - [ ] Molecule viewer: RDKit 2D structures for compound IDs
 - [ ] Evaluation harness: RAGAS/ARES for RAG quality scoring
@@ -292,13 +292,11 @@ For more details, see [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) and [CHANGELOG.md
 
 ## License
 
-Proprietary — Sanofi demo project (2026).
+MIT License (2026)
 
 ---
 
-## Contact
+## Questions?
 
-**Built for**: Sanofi R&D interview demo  
-**Demo Date**: May 6, 2026  
-**Questions**: lei.tongml01@gmail.com
+For issues or questions, open an issue on GitHub or contact lei.tongml01@gmail.com
 
