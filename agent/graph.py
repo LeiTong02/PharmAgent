@@ -17,11 +17,10 @@ from agent.tools import (
     lookup_paper,
     query_assay_data,
     rag_search,
+    wiki_search,
     set_vectorstore,
+    set_wiki_vectorstore,
 )
-
-TOOLS = [rag_search, query_assay_data, fetch_github_readme, lookup_paper]
-_TOOL_MAP = {t.name: t for t in TOOLS}
 
 
 class AgentState(TypedDict):
@@ -29,7 +28,7 @@ class AgentState(TypedDict):
     blocked: bool
 
 
-def _get_llm():
+def _get_llm(tools: list):
     model = os.getenv("MODEL_NAME", "gpt-4o-mini")
     base_url = os.getenv("OPENAI_BASE_URL", "")
     if "google" in base_url.lower():
@@ -39,17 +38,17 @@ def _get_llm():
             temperature=0,
             max_output_tokens=800,
             google_api_key=os.getenv("OPENAI_API_KEY"),
-        ).bind_tools(TOOLS)
+        ).bind_tools(tools)
     return ChatOpenAI(
         model=model,
         temperature=0,
         max_tokens=800,
         base_url=base_url or None,
-    ).bind_tools(TOOLS)
+    ).bind_tools(tools)
 
 
 # ---------------------------------------------------------------------------
-# Nodes
+# Routing (stateless helpers — no tool dependency)
 # ---------------------------------------------------------------------------
 
 def guardrail_node(state: AgentState) -> dict:
@@ -62,32 +61,6 @@ def guardrail_node(state: AgentState) -> dict:
         }
     return {"blocked": False}
 
-
-def agent_node(state: AgentState) -> dict:
-    llm = _get_llm()
-    messages = [SystemMessage(content=SYSTEM_PROMPT)] + list(state["messages"])
-    response = llm.invoke(messages)
-    return {"messages": [response]}
-
-
-def tool_node(state: AgentState) -> dict:
-    last = state["messages"][-1]
-    tool_messages: list[ToolMessage] = []
-    for call in last.tool_calls:
-        tool_fn = _TOOL_MAP.get(call["name"])
-        if tool_fn is None:
-            result = f"Unknown tool: {call['name']}"
-        else:
-            result = tool_fn.invoke(call["args"])
-        tool_messages.append(
-            ToolMessage(content=str(result), tool_call_id=call["id"])
-        )
-    return {"messages": tool_messages}
-
-
-# ---------------------------------------------------------------------------
-# Routing
-# ---------------------------------------------------------------------------
 
 def route_after_guardrail(state: AgentState) -> Literal["agent_node", END]:
     return END if state.get("blocked") else "agent_node"
@@ -104,9 +77,34 @@ def route_after_agent(state: AgentState) -> Literal["tool_node", END]:
 # Graph assembly
 # ---------------------------------------------------------------------------
 
-def build_graph(vectorstore):
-    """Build and compile the LangGraph agent. Must be called after loading vectorstore."""
+def build_graph(vectorstore, wiki_vectorstore=None, mode: str = "classic"):
+    """Build and compile the LangGraph agent.
+
+    mode="classic" uses rag_search (chunk-level retrieval from pharma_ra).
+    mode="wiki"    uses wiki_search (pre-compiled wiki pages from pharma_wiki).
+    """
     set_vectorstore(vectorstore)
+    if wiki_vectorstore is not None:
+        set_wiki_vectorstore(wiki_vectorstore)
+
+    search_tool = wiki_search if mode == "wiki" else rag_search
+    tools = [search_tool, query_assay_data, fetch_github_readme, lookup_paper]
+    tool_map = {t.name: t for t in tools}
+    llm = _get_llm(tools)
+
+    def agent_node(state: AgentState) -> dict:
+        messages = [SystemMessage(content=SYSTEM_PROMPT)] + list(state["messages"])
+        response = llm.invoke(messages)
+        return {"messages": [response]}
+
+    def tool_node(state: AgentState) -> dict:
+        last = state["messages"][-1]
+        tool_messages: list[ToolMessage] = []
+        for call in last.tool_calls:
+            fn = tool_map.get(call["name"])
+            result = fn.invoke(call["args"]) if fn else f"Unknown tool: {call['name']}"
+            tool_messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
+        return {"messages": tool_messages}
 
     g = StateGraph(AgentState)
     g.add_node("guardrail_node", guardrail_node)

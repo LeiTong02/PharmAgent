@@ -4,6 +4,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_redis import RedisVectorStore, RedisConfig
 
 INDEX_NAME = "pharma_ra"
+WIKI_INDEX_NAME = "pharma_wiki"
 
 _METADATA_SCHEMA = [
     {"name": "title", "type": "text"},
@@ -59,39 +60,64 @@ def _get_embeddings():
     )
 
 
-def _drop_index_if_exists(redis_url: str) -> None:
+def _drop_index_if_exists(redis_url: str, index_name: str = INDEX_NAME) -> None:
     """Drop existing index and all its documents so rebuild is clean."""
     try:
         r = _redis.from_url(redis_url)
-        r.execute_command("FT.DROPINDEX", INDEX_NAME, "DD")
+        r.execute_command("FT.DROPINDEX", index_name, "DD")
     except Exception:
         pass  # index didn't exist — fine
 
 
-def build_index(docs) -> RedisVectorStore:
-    """Embed documents and store in Redis. Drops existing index first."""
+def _build_index_for(index_name: str, docs) -> RedisVectorStore:
     redis_url = _get_redis_url()
-    _drop_index_if_exists(redis_url)
+    _drop_index_if_exists(redis_url, index_name)
     config = RedisConfig(
-        index_name=INDEX_NAME,
+        index_name=index_name,
         redis_url=redis_url,
         metadata_schema=_METADATA_SCHEMA,
     )
     return RedisVectorStore.from_documents(docs, _get_embeddings(), config=config)
 
 
-def load_index() -> RedisVectorStore:
-    """Connect to the existing Redis vector index."""
+def _load_index_for(index_name: str) -> RedisVectorStore:
     return RedisVectorStore.from_existing_index(
-        INDEX_NAME,
+        index_name,
         _get_embeddings(),
         redis_url=_get_redis_url(),
     )
 
 
+def build_index(docs) -> RedisVectorStore:
+    """Embed documents and store in Redis pharma_ra. Drops existing index first."""
+    return _build_index_for(INDEX_NAME, docs)
+
+
+def load_index() -> RedisVectorStore:
+    """Connect to the existing pharma_ra Redis vector index."""
+    return _load_index_for(INDEX_NAME)
+
+
 def add_documents(docs) -> int:
-    """Append documents to the existing index. Returns the number of docs added."""
+    """Append documents to the pharma_ra index. Returns the number of docs added."""
     vs = load_index()
+    vs.add_documents(docs)
+    return len(docs)
+
+
+def build_wiki_index(docs) -> RedisVectorStore:
+    """Embed wiki pages and store in Redis pharma_wiki. Drops existing index first."""
+    return _build_index_for(WIKI_INDEX_NAME, docs)
+
+
+def load_wiki_index() -> RedisVectorStore:
+    """Connect to the existing pharma_wiki Redis vector index."""
+    return _load_index_for(WIKI_INDEX_NAME)
+
+
+def add_wiki_documents(docs) -> int:
+    """Append wiki documents to the pharma_wiki index. Returns the number of docs added."""
+    vs = load_wiki_index()
     vs.add_documents(docs)
     return len(docs)
 

@@ -17,11 +17,17 @@ _df: pd.DataFrame | None = None
 
 # Injected by graph.py after vectorstore is loaded
 _vectorstore = None
+_wiki_vectorstore = None
 
 
 def set_vectorstore(vs) -> None:
     global _vectorstore
     _vectorstore = vs
+
+
+def set_wiki_vectorstore(vs) -> None:
+    global _wiki_vectorstore
+    _wiki_vectorstore = vs
 
 
 def _get_df() -> pd.DataFrame:
@@ -45,6 +51,25 @@ def rag_search(query: str) -> str:
     if _vectorstore is None:
         return "Vector store not initialized. Please restart the application."
     context, citations = retrieve(_vectorstore, query, k=4)
+    citation_list = "\n".join(f"  - {c}" for c in citations)
+    return f"{context}\n\n**Sources retrieved:**\n{citation_list}"
+
+
+# ---------------------------------------------------------------------------
+# Tool 1b: Wiki search over pre-compiled knowledge pages
+# ---------------------------------------------------------------------------
+
+@tool
+def wiki_search(query: str) -> str:
+    """Search the pre-compiled pharmaceutical wiki knowledge base and return structured summaries.
+
+    Use this tool for questions about drug mechanisms, clinical trial results, biomarkers,
+    protein structures, assay methodology, and any topic covered in the research literature.
+    Returns pre-organized wiki pages with summaries, key concepts, and findings.
+    """
+    if _wiki_vectorstore is None:
+        return "Wiki store not initialized. Please restart the application."
+    context, citations = retrieve(_wiki_vectorstore, query, k=3)
     citation_list = "\n".join(f"  - {c}" for c in citations)
     return f"{context}\n\n**Sources retrieved:**\n{citation_list}"
 

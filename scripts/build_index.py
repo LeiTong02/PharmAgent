@@ -14,18 +14,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from rag.loader import load_documents
-from rag.vectorstore import build_index
+from rag.vectorstore import build_index, build_wiki_index
+from rag.wiki_generator import docs_to_wiki_documents
 
 if __name__ == "__main__":
+    import os
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:26379")
+
     print("Loading mock documents...")
     docs = load_documents()
     file_count = len(set(d.metadata.get("source_file", "") for d in docs))
-    print(f"  Loaded {len(docs)} chunks from {file_count} files (source_type=mock)")
+    print(f"  Loaded {len(docs)} chunks from {file_count} files")
 
-    import os
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:26379")
-    print(f"Building Redis vector index (index: pharma_ra, url: {redis_url})...")
+    print(f"[Classic] Building pharma_ra index ({redis_url})...")
     build_index(docs)
-    print(f"  Index stored in Redis at {redis_url}")
-    print("Done. Note: any previously uploaded PDFs were removed. "
+    print(f"  Stored {len(docs)} chunks in pharma_ra")
+
+    print(f"[Wiki] Generating wiki pages for {file_count} documents...")
+    wiki_docs = docs_to_wiki_documents(docs)
+    print(f"  Generated {len(wiki_docs)} wiki pages")
+    print(f"[Wiki] Building pharma_wiki index ({redis_url})...")
+    build_wiki_index(wiki_docs)
+    print(f"  Stored {len(wiki_docs)} wiki pages in pharma_wiki")
+
+    print("Done. Both indexes ready.")
+    print("Note: any previously uploaded PDFs were removed. "
           "Use the Admin Upload page to re-index them.")

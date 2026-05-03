@@ -110,7 +110,15 @@ if uploaded:
                 pdf_bytes = file.read()
                 docs = load_pdf_bytes(pdf_bytes, fname)
                 n = add_documents(docs)
-                results.append((fname, "success", n, f"Indexed {n} chunks."))
+
+                # Also generate wiki pages and add to pharma_wiki index
+                from rag.wiki_generator import docs_to_wiki_documents
+                from rag.vectorstore import add_wiki_documents
+                with st.spinner(f"Generating wiki pages for {fname}..."):
+                    wiki_docs = docs_to_wiki_documents(docs)
+                    add_wiki_documents(wiki_docs)
+
+                results.append((fname, "success", n, f"Indexed {n} chunks + {len(wiki_docs)} wiki page(s)."))
             except ValueError as e:
                 results.append((fname, "error", 0, str(e)))
             except Exception as e:
@@ -149,10 +157,16 @@ with st.expander("⚠️ Rebuild mock index (removes all uploaded PDFs)", expand
     )
     if st.button("Rebuild mock index", type="secondary"):
         from rag.loader import load_documents
-        from rag.vectorstore import build_index
+        from rag.vectorstore import build_index, build_wiki_index
+        from rag.wiki_generator import docs_to_wiki_documents
 
-        with st.spinner("Rebuilding index..."):
+        with st.spinner("Rebuilding classic index..."):
             docs = load_documents()
             build_index(docs)
-        st.success(f"Mock index rebuilt: {len(docs)} chunks from 5 papers.")
+        with st.spinner("Generating and rebuilding wiki index..."):
+            wiki_docs = docs_to_wiki_documents(docs)
+            build_wiki_index(wiki_docs)
+        st.success(
+            f"Both indexes rebuilt: {len(docs)} chunks + {len(wiki_docs)} wiki pages from 5 papers."
+        )
         st.rerun()
