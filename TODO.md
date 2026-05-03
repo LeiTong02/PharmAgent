@@ -1,6 +1,6 @@
 # TODO — PharmaRA Demo
 
-Last updated: 2026-05-01
+Last updated: 2026-05-03
 
 ---
 
@@ -37,13 +37,13 @@ Implemented from scratch:
 
 ## Nice-to-Have (if time permits before Wednesday)
 
-- [ ] Add a "How it works" diagram or flow description in the sidebar (text only, no image)
-- [ ] Show tool call trace in the UI (which tool was invoked, with what args) — use `st.expander` or `st.caption`
-- [ ] Add 1–2 more mock papers to improve RAG coverage (e.g., PROTAC degraders, immuno-oncology)
-- [ ] Add a "Clear chat" button to the sidebar
-- [ ] Improve CSV tool: add support for date-range filters and researcher-name queries
-- [ ] Add `st.toast` confirmation when guardrail fires (in addition to red banner)
-- [ ] Pin exact package versions in `requirements.txt` for reproducibility
+- [x] Add a "How it works" diagram or flow description in the sidebar (text only, no image) *(done 2026-05-03)*
+- [x] Show tool call trace in the UI (which tool was invoked, with what args) — `🔧 Tool calls` expander *(done 2026-05-03)*
+- [x] Add 1–2 more mock papers to improve RAG coverage — PROTAC degraders + immuno-oncology *(done 2026-05-03)*
+- [x] Add a "Clear chat" button to the sidebar *(done 2026-05-01)*
+- [x] Improve CSV tool: add support for date-range filters and researcher-name queries *(done 2026-05-03)*
+- [x] Add `st.toast` confirmation when guardrail fires (in addition to red banner) *(done 2026-05-03)*
+- [x] Pin exact package versions in `requirements.txt` for reproducibility *(done 2026-05-03)*
 
 ---
 

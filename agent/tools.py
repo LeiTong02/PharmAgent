@@ -78,6 +78,83 @@ def wiki_search(query: str) -> str:
 # Tool 2: Assay results CSV query
 # ---------------------------------------------------------------------------
 
+_MONTH_MAP = {
+    "january": "01", "jan": "01", "february": "02", "feb": "02",
+    "march": "03", "mar": "03", "april": "04", "apr": "04",
+    "may": "05", "june": "06", "jun": "06", "july": "07", "jul": "07",
+    "august": "08", "aug": "08", "september": "09", "sep": "09", "sept": "09",
+    "october": "10", "oct": "10", "november": "11", "nov": "11",
+    "december": "12", "dec": "12",
+}
+
+
+def _apply_date_filter(df: pd.DataFrame, q: str) -> pd.DataFrame:
+    """Return df filtered by any date constraints found in q."""
+    df = df.copy()
+    df["_date"] = pd.to_datetime(df["date"], errors="coerce")
+
+    # "after YYYY-MM" / "after Month YYYY" / "since ..."
+    m = re.search(r"(?:after|since|from)\s+(\w+)\s+(\d{4})", q)
+    if not m:
+        m = re.search(r"(?:after|since|from)\s+(\d{4}-\d{2})", q)
+    if m:
+        raw = m.group(1)
+        if raw in _MONTH_MAP:
+            cutoff = pd.Timestamp(f"{m.group(2)}-{_MONTH_MAP[raw]}-01")
+        else:
+            cutoff = pd.Timestamp(raw + "-01") if len(raw) == 7 else pd.Timestamp(raw)
+        df = df[df["_date"] >= cutoff]
+
+    # "before YYYY-MM" / "before Month YYYY" / "until ..."
+    m = re.search(r"(?:before|until|up to|prior to)\s+(\w+)\s+(\d{4})", q)
+    if not m:
+        m = re.search(r"(?:before|until|up to|prior to)\s+(\d{4}-\d{2})", q)
+    if m:
+        raw = m.group(1)
+        if raw in _MONTH_MAP:
+            cutoff = pd.Timestamp(f"{m.group(2)}-{_MONTH_MAP[raw]}-01")
+        else:
+            cutoff = pd.Timestamp(raw + "-01") if len(raw) == 7 else pd.Timestamp(raw)
+        df = df[df["_date"] < cutoff]
+
+    # "between Month YYYY and Month YYYY"
+    m = re.search(r"between\s+(\w+)\s+(\d{4})\s+and\s+(\w+)\s+(\d{4})", q)
+    if m:
+        mon1 = _MONTH_MAP.get(m.group(1), m.group(1))
+        mon2 = _MONTH_MAP.get(m.group(3), m.group(3))
+        start = pd.Timestamp(f"{m.group(2)}-{mon1}-01")
+        end = pd.Timestamp(f"{m.group(4)}-{mon2}-01") + pd.offsets.MonthEnd(0)
+        df = df[(df["_date"] >= start) & (df["_date"] <= end)]
+
+    # "in Month YYYY" / "in Q1/Q2/Q3/Q4 YYYY"
+    m = re.search(r"\bin\s+(\w+)\s+(\d{4})\b", q)
+    if m:
+        token = m.group(1).lower()
+        yr = m.group(2)
+        if token in _MONTH_MAP:
+            mon = _MONTH_MAP[token]
+            df = df[df["_date"].dt.strftime("%Y-%m") == f"{yr}-{mon}"]
+        elif token in ("q1", "q2", "q3", "q4"):
+            q_start = {"q1": "01", "q2": "04", "q3": "07", "q4": "10"}[token]
+            q_end_mon = {"q1": "03", "q2": "06", "q3": "09", "q4": "12"}[token]
+            start = pd.Timestamp(f"{yr}-{q_start}-01")
+            end = pd.Timestamp(f"{yr}-{q_end_mon}-01") + pd.offsets.MonthEnd(0)
+            df = df[(df["_date"] >= start) & (df["_date"] <= end)]
+
+    return df.drop(columns=["_date"])
+
+
+def _apply_researcher_filter(df: pd.DataFrame, q: str) -> pd.DataFrame:
+    """Return df filtered by researcher name if one is found in q."""
+    known = df["researcher"].dropna().unique()
+    for name in known:
+        # Match last name or full name (case-insensitive)
+        parts = name.lower().replace(".", "").split()
+        if any(part in q for part in parts if len(part) > 2):
+            return df[df["researcher"].str.lower() == name.lower()]
+    return df
+
+
 @tool
 def query_assay_data(question: str) -> str:
     """Query the internal assay results database (assay_results.csv) to look up compound data.
@@ -85,19 +162,24 @@ def query_assay_data(question: str) -> str:
     Use this tool for questions about IC50, EC50, selectivity ratios, cell viability,
     specific compounds (e.g. SR-0472), targets (EGFR, BRAF, CDK4/Cyclin D1),
     researchers, dates, or compound status (lead, active, deprioritized).
+    Supports date-range filters ("after February 2023", "in Q1 2023", "between Jan and Mar 2023")
+    and researcher filters ("compounds by Chen L.", "Patel's results").
     """
     df = _get_df()
     q = question.lower()
 
+    # Pre-filter by date range and researcher before routing
+    df = _apply_date_filter(df, q)
+    df = _apply_researcher_filter(df, q)
+
     # Route to appropriate query based on keywords
     if any(k in q for k in ["ic50", "potency", "most potent", "lowest ic50", "best ic50"]):
         subset = df[df["IC50_nM"].notna()].sort_values("IC50_nM")
-        # Filter by target if mentioned
         for target_kw, target_val in [("egfr", "EGFR"), ("braf", "BRAF"), ("cdk4", "CDK4"), ("cdk", "CDK4")]:
             if target_kw in q:
                 subset = subset[subset["target"].str.contains(target_val, case=False, na=False)]
                 break
-        result = subset.head(10)[["compound_id", "compound_name", "target", "IC50_nM", "selectivity_ratio", "status"]]
+        result = subset.head(10)[["compound_id", "compound_name", "target", "IC50_nM", "selectivity_ratio", "researcher", "date", "status"]]
 
     elif any(k in q for k in ["ec50", "cellular"]):
         subset = df[df["EC50_nM"].notna()].sort_values("EC50_nM")
@@ -105,17 +187,17 @@ def query_assay_data(question: str) -> str:
             if target_kw in q:
                 subset = subset[subset["target"].str.contains(target_val, case=False, na=False)]
                 break
-        result = subset.head(10)[["compound_id", "compound_name", "target", "EC50_nM", "selectivity_ratio", "status"]]
+        result = subset.head(10)[["compound_id", "compound_name", "target", "EC50_nM", "selectivity_ratio", "researcher", "date", "status"]]
 
     elif any(k in q for k in ["selectivity", "selective"]):
         subset = df[df["selectivity_ratio"].notna()].sort_values("selectivity_ratio", ascending=False)
-        result = subset.head(10)[["compound_id", "compound_name", "target", "IC50_nM", "selectivity_ratio", "status"]]
+        result = subset.head(10)[["compound_id", "compound_name", "target", "IC50_nM", "selectivity_ratio", "researcher", "date", "status"]]
 
     elif any(k in q for k in ["lead", "leads"]):
-        result = df[df["status"] == "lead"][["compound_id", "compound_name", "target", "IC50_nM", "EC50_nM", "selectivity_ratio"]]
+        result = df[df["status"] == "lead"][["compound_id", "compound_name", "target", "IC50_nM", "EC50_nM", "selectivity_ratio", "researcher", "date"]]
 
     elif "deprioritized" in q:
-        result = df[df["status"] == "deprioritized"][["compound_id", "compound_name", "target", "IC50_nM", "EC50_nM"]]
+        result = df[df["status"] == "deprioritized"][["compound_id", "compound_name", "target", "IC50_nM", "EC50_nM", "researcher", "date"]]
 
     elif any(k in q for k in ["egfr"]):
         result = df[df["target"].str.contains("EGFR", case=False, na=False)]
@@ -132,6 +214,9 @@ def query_assay_data(question: str) -> str:
         result = df[df["compound_id"].str.upper() == cid]
         if result.empty:
             return f"No compound found with ID {cid}."
+
+    elif any(k in q for k in ["researcher", "who", "scientist", "by "]):
+        result = df[["compound_id", "compound_name", "target", "IC50_nM", "EC50_nM", "researcher", "date", "status"]]
 
     else:
         result = df.head(15)

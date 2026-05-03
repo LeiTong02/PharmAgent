@@ -103,6 +103,7 @@ with st.sidebar:
         clear_history(username)
         st.session_state[_msg_key] = []
         st.session_state[_cite_key] = {}
+        st.session_state[_trace_key] = {}
         st.rerun()
     st.divider()
 
@@ -133,6 +134,29 @@ with st.sidebar:
         "It combines **RAG over research papers**, **structured assay data queries**, "
         "and **external literature lookup** in a single conversational interface."
     )
+
+    with st.expander("⚙️ How it works", expanded=False):
+        st.markdown(
+            """
+**Query → Agent → Tools → Answer**
+
+1. **Safety guardrail** — blocks personal medical advice before any LLM call
+2. **LLM planner** — decides which tool(s) to call based on your query
+3. **Tools available:**
+   - 🔍 **RAG search** — vector similarity over research paper chunks (`pharma_ra`)
+   - 📖 **Wiki search** — pre-compiled wiki pages per document (`pharma_wiki`)
+   - 📊 **Assay DB** — filtered queries on `assay_results.csv` (IC50, EC50, selectivity…)
+   - 🐙 **GitHub** — fetches README from any public repo URL
+   - 📄 **Scholar** — paper metadata from Semantic Scholar / arXiv fallback
+4. **Answer synthesis** — LLM composes a final response with `[Source: ...]` citations
+
+**Indexing pipeline:**
+```
+PDF / .txt → chunk → embed → Redis pharma_ra   (Classic RAG)
+                   → LLM wiki page → embed → Redis pharma_wiki  (Wiki RAG)
+```
+            """
+        )
     st.divider()
 
     st.markdown("### Example queries")
@@ -162,6 +186,7 @@ with st.sidebar:
 # Per-user session state keys so each account has its own isolated chat history
 _msg_key = f"messages_{username}"
 _cite_key = f"citations_{username}"
+_trace_key = f"traces_{username}"
 
 # ---------------------------------------------------------------------------
 # Chat state (namespaced per user, backed by Redis)
@@ -170,6 +195,8 @@ if _msg_key not in st.session_state:
     msgs, cites = load_history(username)
     st.session_state[_msg_key] = msgs
     st.session_state[_cite_key] = cites
+if _trace_key not in st.session_state:
+    st.session_state[_trace_key] = {}
 
 # ---------------------------------------------------------------------------
 # Header
@@ -188,12 +215,20 @@ for i, msg in enumerate(st.session_state[_msg_key]):
     msg_role = "user" if isinstance(msg, HumanMessage) else "assistant"
     with st.chat_message(msg_role):
         st.markdown(_extract_text(msg.content))
-        if msg_role == "assistant" and i in st.session_state[_cite_key]:
-            cites = st.session_state[_cite_key][i]
-            if cites:
-                with st.expander(f"📄 Sources ({len(cites)})", expanded=False):
-                    for c in cites:
-                        st.markdown(f"- {c}")
+        if msg_role == "assistant":
+            if i in st.session_state[_trace_key]:
+                traces = st.session_state[_trace_key][i]
+                if traces:
+                    with st.expander(f"🔧 Tool calls ({len(traces)})", expanded=False):
+                        for name, args in traces:
+                            args_str = ", ".join(f"{k}={repr(v)}" for k, v in args.items())
+                            st.caption(f"`{name}({args_str})`")
+            if i in st.session_state[_cite_key]:
+                cites = st.session_state[_cite_key][i]
+                if cites:
+                    with st.expander(f"📄 Sources ({len(cites)})", expanded=False):
+                        for c in cites:
+                            st.markdown(f"- {c}")
 
 # ---------------------------------------------------------------------------
 # Input handling (sidebar button OR chat input)
@@ -216,6 +251,13 @@ if user_input:
         final_msgs = result["messages"]
         blocked = result.get("blocked", False)
 
+        # Collect all tool calls from intermediate agent steps
+        tool_traces: list[tuple[str, dict]] = []
+        for m in final_msgs:
+            if isinstance(m, AIMessage) and m.tool_calls:
+                for tc in m.tool_calls:
+                    tool_traces.append((tc["name"], tc.get("args", {})))
+
         ai_reply = None
         for m in reversed(final_msgs):
             if isinstance(m, AIMessage) and not m.tool_calls:
@@ -229,12 +271,20 @@ if user_input:
 
         if blocked:
             st.error(reply_text)
+            st.toast("Safety guardrail triggered — medical advice request blocked.", icon="🚫")
         else:
             st.markdown(reply_text)
 
-        cite_matches = re.findall(r"\[Source:\s*([^\]]+)\]", reply_text)
         citation_idx = len(st.session_state[_msg_key])
 
+        if tool_traces and not blocked:
+            with st.expander(f"🔧 Tool calls ({len(tool_traces)})", expanded=False):
+                for name, args in tool_traces:
+                    args_str = ", ".join(f"{k}={repr(v)}" for k, v in args.items())
+                    st.caption(f"`{name}({args_str})`")
+            st.session_state[_trace_key][citation_idx] = tool_traces
+
+        cite_matches = re.findall(r"\[Source:\s*([^\]]+)\]", reply_text)
         if cite_matches and not blocked:
             with st.expander(f"📄 Sources ({len(set(cite_matches))})", expanded=False):
                 for c in set(cite_matches):

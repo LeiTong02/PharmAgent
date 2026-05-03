@@ -1,0 +1,85 @@
+Title: PROTAC-Mediated Targeted Protein Degradation of BRD4: Design, Synthesis, and Preclinical Evaluation
+Authors: Zhang W., Oliveira M., Sharma P., Bergmann K., Lee S.
+Year: 2024
+Journal: Journal of Medicinal Chemistry
+
+Abstract:
+Proteolysis-targeting chimeras (PROTACs) represent a transformative modality in drug discovery, enabling catalytic degradation of previously undruggable targets via the ubiquitin–proteasome system (UPS). We report the design and evaluation of a series of BRD4-targeting PROTACs incorporating a JQ1-derived BRD4 warhead tethered to VHL or CRBN E3 ligase recruiters via PEG linkers of varying length. Lead compound SD-7740 (CRBN recruiter, 4-PEG linker) achieved DC50 of 8.3 nM in MV4-11 cells with Dmax exceeding 98% at 100 nM. Selectivity profiling by quantitative proteomics (TMT-based) showed >500-fold selectivity for BRD4 over BRD2 and BRD3, a significant improvement over the parental JQ1 inhibitor. In vivo xenograft studies in MV4-11 mouse models demonstrated 78% tumor growth inhibition at 10 mg/kg (IV, every other day). Hook effect was observed above 1 μM and characterized.
+
+1. Introduction
+BRD4, a member of the bromodomain and extra-terminal (BET) family, is a validated oncology target implicated in MYC-driven cancers, AML, and NUT midline carcinoma. Small molecule BET inhibitors such as JQ1, OTX015, and BMS-986158 have demonstrated proof-of-concept but are hampered by dose-limiting toxicity, rapid resynthesis of the target protein, and development of resistance through bromodomain mutations. PROTACs offer a conceptually distinct mechanism: rather than occupying the active site, they recruit an E3 ubiquitin ligase to the target, leading to polyubiquitination and subsequent proteasomal degradation. Key advantages include: (1) sub-stoichiometric activity (catalytic mechanism), (2) ability to degrade mutant or overexpressed proteins, and (3) extended duration of action post-drug clearance.
+
+2. PROTAC Design Strategy
+Two E3 ligase adaptor handles were explored:
+- VHL ligase recruiter: (S,R)-VH032 hydroxyproline-based ligand
+- CRBN ligase recruiter: thalidomide and pomalidomide derivatives
+
+BRD4 warheads: JQ1 (+)-enantiomer (Kd = 49 nM, BD1); a novel 4-oxo-dihydroquinazoline scaffold (Kd = 12 nM, BD1/BD2 dual)
+
+Linker chemistry: PEG2, PEG3, PEG4 and alkyl C4–C6 linkers. PEG4 CRBN constructs consistently outperformed VHL constructs in cellular degradation efficiency.
+
+3. Synthesis
+SD-7740 was synthesized via copper-catalyzed azide–alkyne cycloaddition (CuAAC) click chemistry, coupling JQ1-propargyl ether with CRBN-PEG4-azide. Overall yield: 18% over 9 steps. Key intermediate SD-7730 (the CRBN-PEG4-amine) was prepared from pomalidomide and Fmoc-PEG4-NHS ester. Purity confirmed by HPLC (>98%) and HRMS.
+
+4. In Vitro Characterization
+DC50 and Dmax determination: MV4-11, MOLM-13, and RS4;11 cells treated with SD-7740 (0.1 nM – 10 μM, 24 h). Immunoblot analysis probed with anti-BRD4 (Cell Signaling, 1:1000), anti-BRD2, anti-BRD3, and anti-GAPDH antibodies.
+
+SD-7740 results:
+- DC50 (MV4-11): 8.3 nM
+- Dmax: >98% (100 nM, 24h)
+- BRD2 DC50: >5 μM (>600-fold selective)
+- BRD3 DC50: 4.2 μM (>500-fold selective)
+- Hook effect: apparent above 1 μM (excess PROTAC saturates E3 ligase and BRD4 independently)
+
+Ternary complex formation assessed by NanoBRET: PROTAC:CRBN:BRD4 Kd,ternary = 2.1 nM. Cooperativity factor (α): 18.4, confirming strong positive cooperativity.
+
+Anti-proliferative activity (GI50):
+- MV4-11: 4.1 nM
+- MOLM-13: 11.7 nM
+- RS4;11: 28.3 nM
+- HL-60 (AML, BRD4-low): 210 nM (>50-fold selectivity, on-target)
+
+Comparison to JQ1: GI50 in MV4-11 = 89 nM; PROTAC SD-7740 is ~22-fold more potent, consistent with degrader advantage.
+
+MYC protein level reduction: 24h at 10 nM SD-7740 reduced MYC by 91%, consistent with BRD4 transcriptional dependency.
+
+5. Proteomics Selectivity Profiling
+TMT-10plex quantitative proteomics in MOLM-13 (10 nM SD-7740, 6h). Of 8,241 quantified proteins, 98.9% showed <20% change. Significantly degraded proteins (>50% reduction, q<0.05): BRD4 (91%), IKZF1 (18%, likely neo-substrate via CRBN). IKZF1 degradation is a known CRBN liability seen with IMiDs; further optimization of the phthalimide moiety is underway to eliminate this off-target effect.
+
+6. ADME Properties
+SD-7740 MW: 1,087 Da (within acceptable range for oral PROTAC; "beyond rule of five")
+Aqueous solubility (PBS, pH 7.4): 8.4 μg/mL
+Plasma protein binding: 97.3%
+Mouse liver microsomal stability: CLint = 22 μL/min/mg (moderate)
+Permeability (MDCK-MDR1): Papp A→B = 4.2 × 10−6 cm/s; efflux ratio = 3.1 (moderate P-gp substrate)
+CYP3A4 IC50: >10 μM (no significant inhibition)
+IV formulation: 10% DMSO / 40% PEG400 / 50% PBS used for in vivo studies
+
+7. In Vivo Xenograft Efficacy
+MV4-11 subcutaneous xenograft (NOD/SCID mice, n=8/group):
+- Vehicle (10% DMSO/40% PEG400/50% PBS)
+- SD-7740 5 mg/kg IV Q2D
+- SD-7740 10 mg/kg IV Q2D
+- JQ1 50 mg/kg IP QD (positive control)
+
+Tumor growth inhibition at Day 21:
+- Vehicle: 0%
+- JQ1 50 mg/kg: 41%
+- SD-7740 5 mg/kg: 58%
+- SD-7740 10 mg/kg: 78%
+
+Body weight loss: ≤8% at 10 mg/kg (within acceptable limit). No mortality observed.
+BRD4 degradation in tumor tissue (Day 5 biopsy): 87% reduction vs. vehicle (IHC quantification).
+
+8. Resistance Mechanisms
+MV4-11 cells developed resistance after 30 days continuous SD-7740 exposure (100 nM). Resistance mechanism: point mutation in CRBN (Y384C) disrupting CRBN:PROTAC binding, confirmed by sequencing and rescue experiment with VHL-recruiting analog SD-7750. SD-7750 maintained full activity in resistant cells.
+
+9. Conclusion
+SD-7740 is a potent, selective BRD4 PROTAC degrader with nanomolar cellular activity, strong cooperativity, and in vivo efficacy. CRBN mutation represents the primary resistance mechanism. A next-generation VHL-based analog is in development to address resistance. IND-enabling studies planned for Q3 2025.
+
+References:
+1. Bondeson DP, et al. Science 2015;348(6238):1376-81.
+2. Burslem GM, Crews CM. Cell 2020;181(1):102-14.
+3. Filippakopoulos P, et al. Nature 2010;468:1067-73.
+4. Winter GE, et al. Science 2015;348(6241):1376-81.
+5. Crew AP, et al. J Med Chem 2018;61(2):583-98.
