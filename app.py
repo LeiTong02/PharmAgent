@@ -44,6 +44,52 @@ def _extract_text(content) -> str:
     return content or ""
 
 
+def _render_molecule_structures(text: str) -> None:
+    """Render 2D molecule structures for compound IDs found in assay result text.
+
+    Looks up SMILES from the assay CSV and fetches PNG images from PubChem.
+    Only called when query_assay_data tool was invoked.
+    """
+    import urllib.parse
+    import pandas as pd
+
+    smiles_map: dict[str, str] = {}
+    try:
+        csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "assay_results.csv")
+        df = pd.read_csv(csv_path)
+        if "smiles" in df.columns:
+            for _, row in df.iterrows():
+                smi = str(row.get("smiles", "")).strip()
+                cid = str(row.get("compound_id", "")).upper().strip()
+                if smi and smi not in ("nan", ""):
+                    smiles_map[cid] = smi
+    except Exception:
+        return
+
+    if not smiles_map:
+        return
+
+    found = re.findall(r"\bSR-\d+\b", text, re.IGNORECASE)
+    found = [c.upper() for c in found if c.upper() in smiles_map]
+    found = list(dict.fromkeys(found))[:4]  # deduplicate, max 4 structures
+
+    if not found:
+        return
+
+    st.caption("🔬 Compound Structures")
+    cols = st.columns(len(found))
+    for col, cid in zip(cols, found):
+        encoded = urllib.parse.quote(smiles_map[cid], safe="")
+        img_url = (
+            f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{encoded}"
+            "/PNG?image_size=200x200"
+        )
+        try:
+            col.image(img_url, caption=cid, width=150)
+        except Exception:
+            col.caption(f"{cid} (structure unavailable)")
+
+
 # ---------------------------------------------------------------------------
 # Env check
 # ---------------------------------------------------------------------------
@@ -157,6 +203,20 @@ PDF / .txt → chunk → embed → Redis pharma_ra   (Classic RAG)
 ```
             """
         )
+    with st.expander("💰 Token usage", expanded=False):
+        try:
+            from chat.token_logger import get_session_usage
+            usage = get_session_usage(username, limit=50)
+            if usage["query_count"] > 0:
+                st.metric("Total tokens (last 50 queries)", f"{usage['total_tokens']:,}")
+                col1, col2 = st.columns(2)
+                col1.metric("Prompt", f"{usage['prompt_tokens']:,}")
+                col2.metric("Completion", f"{usage['completion_tokens']:,}")
+                st.caption(f"Across {usage['query_count']} queries")
+            else:
+                st.caption("No queries yet this session.")
+        except Exception:
+            st.caption("Usage data unavailable.")
     st.divider()
 
     st.markdown("### Example queries")
@@ -244,36 +304,81 @@ if user_input:
     st.session_state[_msg_key].append(human_msg)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            state_in = {"messages": st.session_state[_msg_key], "blocked": False}
-            result = graph.invoke(state_in, config={"recursion_limit": 10})
+        _tool_status = st.empty()
+        _text_ph = st.empty()
 
-        final_msgs = result["messages"]
-        blocked = result.get("blocked", False)
-
-        # Collect all tool calls from intermediate agent steps
+        final_text = ""
         tool_traces: list[tuple[str, dict]] = []
-        for m in final_msgs:
-            if isinstance(m, AIMessage) and m.tool_calls:
-                for tc in m.tool_calls:
-                    tool_traces.append((tc["name"], tc.get("args", {})))
+        blocked = False
+        last_token_usage: dict = {}
 
-        ai_reply = None
-        for m in reversed(final_msgs):
-            if isinstance(m, AIMessage) and not m.tool_calls:
-                ai_reply = m
-                break
+        state_in = {"messages": st.session_state[_msg_key], "blocked": False}
 
-        if ai_reply is None:
-            ai_reply = AIMessage(content="No response generated.")
+        try:
+            for event in graph.stream(
+                state_in, stream_mode="updates", config={"recursion_limit": 10}
+            ):
+                for node, update in event.items():
+                    msgs = update.get("messages", [])
 
-        reply_text = _extract_text(ai_reply.content)
+                    if node == "guardrail_node":
+                        if update.get("blocked"):
+                            blocked = True
+                        for m in msgs:
+                            if isinstance(m, AIMessage):
+                                final_text = _extract_text(m.content)
+
+                    elif node == "agent_node":
+                        for m in msgs:
+                            if isinstance(m, AIMessage) and m.tool_calls:
+                                for tc in m.tool_calls:
+                                    tool_traces.append((tc["name"], tc.get("args", {})))
+                                    _tool_status.caption(f"⚙️ Calling `{tc['name']}`...")
+                            elif isinstance(m, AIMessage) and not m.tool_calls:
+                                usage = (
+                                    m.response_metadata.get("token_usage")
+                                    or m.response_metadata.get("usage_metadata")
+                                    or {}
+                                )
+                                if usage:
+                                    last_token_usage = usage
+                                final_text = _extract_text(m.content)
+                                if not blocked:
+                                    _text_ph.markdown(final_text)
+
+                    elif node == "tool_node":
+                        _tool_status.caption("⚙️ Processing results...")
+
+        except Exception as exc:
+            final_text = f"An error occurred: {exc}"
+            _text_ph.error(final_text)
+
+        _tool_status.empty()
 
         if blocked:
-            st.error(reply_text)
+            _text_ph.empty()
+            st.error(final_text)
             st.toast("Safety guardrail triggered — medical advice request blocked.", icon="🚫")
+        elif not final_text:
+            final_text = "No response generated."
+            _text_ph.markdown(final_text)
         else:
-            st.markdown(reply_text)
+            _text_ph.markdown(final_text)
+
+        # Molecule viewer: render 2D structures when assay data was queried
+        if not blocked and any(name == "query_assay_data" for name, _ in tool_traces):
+            _render_molecule_structures(final_text)
+
+        # Log token usage for cost tracking
+        if last_token_usage:
+            from chat.token_logger import log_token_usage
+            log_token_usage(
+                username=username,
+                query=user_input,
+                usage=last_token_usage,
+                model=os.getenv("MODEL_NAME", "gpt-4o-mini"),
+                mode=rag_mode,
+            )
 
         citation_idx = len(st.session_state[_msg_key])
 
@@ -284,12 +389,13 @@ if user_input:
                     st.caption(f"`{name}({args_str})`")
             st.session_state[_trace_key][citation_idx] = tool_traces
 
-        cite_matches = re.findall(r"\[Source:\s*([^\]]+)\]", reply_text)
+        cite_matches = re.findall(r"\[Source:\s*([^\]]+)\]", final_text)
         if cite_matches and not blocked:
             with st.expander(f"📄 Sources ({len(set(cite_matches))})", expanded=False):
                 for c in set(cite_matches):
                     st.markdown(f"- {c}")
             st.session_state[_cite_key][citation_idx] = list(set(cite_matches))
 
+    ai_reply = AIMessage(content=final_text)
     st.session_state[_msg_key].append(ai_reply)
     save_history(username, st.session_state[_msg_key], st.session_state[_cite_key])
