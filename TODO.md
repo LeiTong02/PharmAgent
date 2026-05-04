@@ -1,6 +1,6 @@
 # TODO — PharmaRA Demo
 
-Last updated: 2026-05-03 (all future extensions implemented)
+Last updated: 2026-05-04 (FastAPI web frontend complete on branch frontend/fastapi-ui)
 
 ---
 
@@ -59,3 +59,37 @@ Implemented from scratch:
 - [x] Real Sanofi document corpus: intentionally skipped — requires internal documents behind auth; mock papers serve as placeholders
 - [x] Streaming responses: `graph.stream(stream_mode="updates")` shows real-time tool status ("⚙️ Calling `tool_name`...") while agent executes *(done 2026-05-03)*
 - [x] Cost tracking: `chat/token_logger.py` logs per-query token usage to `logs/token_usage.jsonl`; sidebar "💰 Token usage" expander *(done 2026-05-03)*
+
+---
+
+## FastAPI Web Frontend — COMPLETE ✅ (branch: `frontend/fastapi-ui`)
+
+Implemented 2026-05-04. Professional pharma-themed web UI replacing Streamlit's generic look.
+Original `app.py` and all backend modules left untouched.
+
+### What was built
+- [x] `frontend/` FastAPI package — config, deps, lifespan (loads vectorstores + graphs once)
+- [x] SQLite auth (`frontend/db/auth.py`) — bcrypt hashing, seeded from `.env`, replaces streamlit-authenticator
+- [x] Session cookies via `SessionMiddleware` (itsdangerous signed, session-only)
+- [x] Login/logout routes (`/login`, `/logout`) + pharma-themed login page
+- [x] Chat page (`/chat`) — deep-navy UI, Alpine.js reactive, marked.js markdown rendering
+- [x] SSE streaming (`POST /api/chat`) — `ThreadPoolExecutor` bridge from sync `graph.stream()` to async SSE queue
+- [x] History API (`GET/DELETE /api/history`) — backed by existing `chat/history.py`
+- [x] Tool call trace panel, source citations panel, molecule structure images (PubChem)
+- [x] Retrieval mode toggle (Classic RAG / Wiki RAG), 7 example queries in sidebar
+- [x] Token usage display, "How it works" section
+- [x] Admin page (`/admin`) — drag-and-drop PDF upload, file listing, admin-only gating (403 for researcher)
+- [x] 36 tests, all passing (`pytest tests/test_frontend/ -v`)
+
+### How to run
+```bash
+uvicorn frontend.main:app --reload --port 8000
+# Login: admin/admin123 or researcher/researcher123
+# Original Streamlit still works: streamlit run app.py --server.port 8501
+```
+
+### Bugs fixed during development
+- `passlib` ↔ `bcrypt==5.0.0` incompatibility → switched to `bcrypt` directly
+- Starlette 1.0.0 changed `TemplateResponse` signature (`request` is now first positional arg)
+- Jinja2 duplicate `{% block content %}` inside `{% if %}` → moved `{% endif %}` before `<main>`
+- `ASGITransport` does not fire lifespan → initialize `app.state` directly in test fixture
