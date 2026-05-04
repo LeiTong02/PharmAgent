@@ -1,6 +1,6 @@
 # TODO — PharmaRA Demo
 
-Last updated: 2026-05-04 (FastAPI web frontend complete on branch frontend/fastapi-ui)
+Last updated: 2026-05-04 (FastAPI complete; manual smoke test pending 2026-05-05)
 
 ---
 
@@ -93,3 +93,17 @@ uvicorn frontend.main:app --reload --port 8000
 - Starlette 1.0.0 changed `TemplateResponse` signature (`request` is now first positional arg)
 - Jinja2 duplicate `{% block content %}` inside `{% if %}` → moved `{% endif %}` before `<main>`
 - `ASGITransport` does not fire lifespan → initialize `app.state` directly in test fixture
+
+---
+
+## Pending (2026-05-05)
+
+- [ ] Manual smoke test of FastAPI frontend (http://localhost:8000):
+  - [ ] Login as admin → chat page loads correctly
+  - [ ] Send a RAG query → SSE streaming works, citations appear
+  - [ ] Send guardrail-triggering query → blocked banner shown
+  - [ ] Toggle Classic RAG ↔ Wiki RAG → mode switch works
+  - [ ] Click sidebar example queries → prefill + auto-submit
+  - [ ] Admin page: drag-and-drop PDF upload → success
+  - [ ] Logout → redirected to login page
+  - [ ] Login as researcher → /admin returns 403

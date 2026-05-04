@@ -152,4 +152,50 @@ docker ps  # should see redis container
 streamlit run app.py
 ```
 
+## [2026-05-04] — FastAPI web frontend (branch: `frontend/fastapi-ui`)
+
+### Added
+- **`frontend/` package** — FastAPI app alongside existing Streamlit `app.py` (Streamlit untouched)
+  - `frontend/config.py` — Pydantic Settings, reads same `.env` as Streamlit app
+  - `frontend/deps.py` — `get_current_user()` (session → SQLite lookup → 302 if missing), `require_admin()` (403 if role ≠ admin)
+  - `frontend/main.py` — FastAPI lifespan: `init_db_sync()`, loads both vectorstores + graphs, `SessionMiddleware`, router mounts, root redirect `/ → /chat`
+- **SQLite authentication** (`frontend/db/auth.py`) — replaces `streamlit-authenticator`
+  - `users` table with `bcrypt` password hashing (uses `bcrypt` directly; `passlib` incompatible with `bcrypt==5.0.0`)
+  - Seeded from `.env` on first startup; idempotent re-runs; DB at `frontend/auth.db` (gitignored)
+- **Auth routes** (`frontend/routers/auth_router.py`) — `GET /login`, `POST /login`, `GET /logout`; itsdangerous signed session cookies, session-only expiry
+- **Chat page** (`/chat`) with SSE streaming (`POST /api/chat`):
+  - `ThreadPoolExecutor` bridge: sync `graph.stream()` runs in thread → `asyncio.Queue` via `loop.call_soon_threadsafe()` → async SSE consumer
+  - SSE event types: `tool_status`, `text_chunk`, `blocked`, `tool_trace`, `citations`, `compounds`, `done`, `error`
+  - History API (`GET/DELETE /api/history`) backed by existing `chat/history.py`
+  - Token usage endpoint (`GET /api/token-usage`)
+- **Admin page** (`/admin`) — drag-and-drop PDF upload, file listing; 403 for non-admin
+- **Pharma-themed UI** (Jinja2 + Alpine.js + Tailwind CSS + marked.js, all CDN, no build step)
+  - Deep-navy color scheme (`#0f1929` bg, `#38bdf8` accent)
+  - Tool call trace panel, source citations panel, molecule images (PubChem PNG)
+  - Retrieval mode toggle (Classic RAG / Wiki RAG), 7 example queries in sidebar
+- **36 tests** (`tests/test_frontend/`) — all passing; `pytest.ini` sets `asyncio_mode = auto`
+
+### Fixed (during development)
+- `passlib` ↔ `bcrypt==5.0.0` incompatibility → switched to `import bcrypt as _bcrypt` directly
+- Starlette 1.0.0 changed `TemplateResponse` signature — `request` is now first positional arg
+- Jinja2 `block 'content' defined twice` error — moved `{% endif %}` before `<main>` so single block is always rendered
+- `ASGITransport` does not fire lifespan events → initialize `app.state.*` directly in test fixtures
+- Import-inside-function mock paths (`patch("rag.vectorstore.list_uploaded_files", ...)` not the router module)
+
+### Verified
+- 19/19 auth + login-flow tests passing (`test_auth.py`, `test_auth_flow.py`)
+- 36/36 total frontend tests passing (`pytest tests/test_frontend/ -v`)
+- SQLite 3.50.2, aiosqlite, bcrypt all confirmed installed
+- Manual smoke test planned: 2026-05-05
+
+### Run commands
+```bash
+# FastAPI (new)
+uvicorn frontend.main:app --reload --port 8000
+# Login: admin/admin123 or researcher/researcher123
+
+# Streamlit (unchanged)
+streamlit run app.py --server.port 8501
+```
+
 <!-- Future entries go above this line, newest first -->
