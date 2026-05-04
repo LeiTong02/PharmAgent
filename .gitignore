@@ -8,3 +8,6 @@ __pycache__/
 .vscode/
 test_dir/
 data/
+frontend/auth.db
+logs/
+*.jsonl
