@@ -39,12 +39,15 @@ async def upload_pdf(
 
     try:
         from rag.loader import load_pdf_bytes
-        from rag.vectorstore import add_documents, add_wiki_documents
+        from rag.vectorstore import add_documents, add_image_documents, add_wiki_documents
         from rag.wiki_generator import docs_to_wiki_documents
 
-        # Classic RAG
-        chunks = load_pdf_bytes(file.filename, contents)
+        # Classic RAG — text chunks (text + table + caption + vision_description)
+        chunks, image_doc_tuples = load_pdf_bytes(contents, file.filename)
         n_classic = add_documents(chunks)
+
+        # Image embedding — figure_image and page_screenshot chunks
+        n_images = add_image_documents(image_doc_tuples)
 
         # Wiki RAG
         wiki_docs = docs_to_wiki_documents(chunks)
@@ -54,6 +57,7 @@ async def upload_pdf(
             "ok": True,
             "filename": file.filename,
             "chunks": n_classic,
+            "image_chunks": n_images,
             "wiki_pages": n_wiki,
         }
     except Exception as exc:

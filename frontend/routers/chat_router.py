@@ -21,6 +21,17 @@ from frontend.deps import get_current_user
 router = APIRouter(tags=["chat"])
 _executor = ThreadPoolExecutor(max_workers=4)
 
+
+def _extract_text(content) -> str:
+    """Extract plain text from Gemini thinking-model content (list of blocks or plain str)."""
+    if isinstance(content, list):
+        return "".join(
+            block.get("text", "") if isinstance(block, dict) else str(block)
+            for block in content
+        )
+    return str(content) if content else ""
+
+
 # ---------------------------------------------------------------------------
 # SMILES map (loaded once from CSV at import time)
 # ---------------------------------------------------------------------------
@@ -56,15 +67,16 @@ def _extract_compound_images(text: str) -> list[dict]:
         cid_upper = cid.upper()
         if cid_upper in _SMILES_MAP and cid_upper not in ids_seen:
             encoded = urllib.parse.quote(_SMILES_MAP[cid_upper], safe="")
+            # Use query-param format so SMILES with '/' (stereochemistry) don't break the path
             url = (
-                f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/"
-                f"{encoded}/PNG?image_size=200x200"
+                f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/PNG"
+                f"?smiles={encoded}&image_size=200x200"
             )
             seen.append({"id": cid_upper, "url": url})
             ids_seen.add(cid_upper)
-            if len(seen) >= 4:
-                break
     return seen
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -75,9 +87,9 @@ def _messages_to_json(messages: list) -> list[dict]:
     result = []
     for m in messages:
         if isinstance(m, HumanMessage):
-            result.append({"role": "user", "content": str(m.content)})
+            result.append({"role": "user", "content": _extract_text(m.content)})
         elif isinstance(m, AIMessage):
-            result.append({"role": "assistant", "content": str(m.content)})
+            result.append({"role": "assistant", "content": _extract_text(m.content)})
     return result
 
 
@@ -164,6 +176,7 @@ async def chat_stream(request: Request, user: dict = Depends(get_current_user)):
             "token_usage": {},
             "new_citations": {},
             "blocked": False,
+            "approved_visuals": [],  # policy-approved visual chunks from smart_retrieve
         }
 
         def _worker():
@@ -171,9 +184,11 @@ async def chat_stream(request: Request, user: dict = Depends(get_current_user)):
                 for event in graph.stream(
                     state_in,
                     stream_mode="updates",
-                    config={"recursion_limit": 10},
+                    config={"recursion_limit": 25},
                 ):
                     for node, update in event.items():
+                        if update is None:
+                            continue
                         msgs = update.get("messages", [])
 
                         if node == "guardrail_node":
@@ -187,7 +202,7 @@ async def chat_stream(request: Request, user: dict = Depends(get_current_user)):
                                 if isinstance(m, AIMessage) and m.content:
                                     loop.call_soon_threadsafe(
                                         queue.put_nowait,
-                                        {"type": "text_chunk", "content": str(m.content)},
+                                        {"type": "text_chunk", "content": _extract_text(m.content)},
                                     )
 
                         elif node == "agent_node":
@@ -204,14 +219,15 @@ async def chat_stream(request: Request, user: dict = Depends(get_current_user)):
                                             {"type": "tool_status", "content": f"⚙️ Calling `{tc['name']}`..."},
                                         )
                                 elif m.content:
+                                    meta = m.response_metadata or {}
                                     usage = (
-                                        m.response_metadata.get("token_usage")
-                                        or m.response_metadata.get("usage_metadata")
+                                        meta.get("token_usage")
+                                        or meta.get("usage_metadata")
                                         or {}
                                     )
                                     if usage:
                                         shared["token_usage"].update(usage)
-                                    chunk = str(m.content)
+                                    chunk = _extract_text(m.content)
                                     shared["text_parts"].append(chunk)
                                     loop.call_soon_threadsafe(
                                         queue.put_nowait,
@@ -229,6 +245,16 @@ async def chat_stream(request: Request, user: dict = Depends(get_current_user)):
                                     if line.startswith("[Source:"):
                                         idx = len(shared["new_citations"])
                                         shared["new_citations"][str(idx)] = {"raw": line}
+                                    elif line.startswith("__VISUAL_CHUNKS__:"):
+                                        try:
+                                            payload = json.loads(line[len("__VISUAL_CHUNKS__:"):])
+                                            seen_urls = {v["url"] for v in shared["approved_visuals"]}
+                                            for v in payload:
+                                                if isinstance(v, dict) and v.get("url") and v["url"] not in seen_urls:
+                                                    shared["approved_visuals"].append(v)
+                                                    seen_urls.add(v["url"])
+                                        except (json.JSONDecodeError, KeyError, TypeError):
+                                            pass
 
             except Exception as exc:
                 loop.call_soon_threadsafe(
@@ -259,6 +285,9 @@ async def chat_stream(request: Request, user: dict = Depends(get_current_user)):
 
         if shared["new_citations"]:
             yield _sse("citations", json.dumps(shared["new_citations"]))
+
+        if shared["approved_visuals"]:
+            yield _sse("paper_figures", json.dumps(shared["approved_visuals"]))
 
         # Persist history
         if not shared["blocked"] and final_text:

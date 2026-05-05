@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import pytest
 from unittest.mock import MagicMock, patch
 
 
@@ -39,11 +40,13 @@ async def test_upload_rejects_empty_file(admin_client):
 async def test_upload_pdf_success(admin_client):
     fake_pdf = io.BytesIO(b"%PDF-1.4 fake pdf content for testing purposes")
     mock_chunks = [MagicMock()]
+    mock_image_tuples = []  # load_pdf_bytes now returns (text_docs, image_doc_tuples)
     mock_wiki_docs = [MagicMock()]
 
     with (
-        patch("rag.loader.load_pdf_bytes", return_value=mock_chunks),
+        patch("rag.loader.load_pdf_bytes", return_value=(mock_chunks, mock_image_tuples)),
         patch("rag.vectorstore.add_documents", return_value=3),
+        patch("rag.vectorstore.add_image_documents", return_value=0),
         patch("rag.wiki_generator.docs_to_wiki_documents", return_value=mock_wiki_docs),
         patch("rag.vectorstore.add_wiki_documents", return_value=1),
     ):
@@ -82,3 +85,10 @@ async def test_list_files_for_admin(admin_client):
 async def test_list_files_403_for_researcher(researcher_client):
     resp = await researcher_client.get("/admin/files")
     assert resp.status_code == 403
+
+
+def test_load_pdf_bytes_rejects_string():
+    """Passing a string as file_bytes (swapped args) must raise TypeError immediately."""
+    from rag.loader import load_pdf_bytes
+    with pytest.raises(TypeError, match="expected bytes"):
+        load_pdf_bytes("filename.pdf", b"ignored")

@@ -29,7 +29,8 @@
       "Show compounds by Chen L. with IC50 below 5 nM"
     ] %}
     {% for q in examples %}
-    <button @click="$dispatch('send-query', {{ q | tojson }})"
+    <button @click="$dispatch('send-query', $el.dataset.q)"
+            data-q="{{ q }}"
             class="w-full text-left text-xs text-slate-400 hover:text-white hover:bg-navy-600 px-2.5 py-1.5 rounded-md transition-colors leading-snug">
       {{ q }}
     </button>
@@ -151,6 +152,29 @@
                 </template>
               </div>
             </div>
+          </template>
+
+          <!-- Paper Figures (uploaded PDF pages with embedded images) -->
+          <template x-if="msg.paperFigures && msg.paperFigures.length > 0">
+            <details class="mt-3 border-t border-navy-500 pt-3" open>
+              <summary class="text-xs text-slate-400 cursor-pointer hover:text-slate-300 select-none">
+                🖼 Paper Figures (<span x-text="msg.paperFigures.length"></span> page<span x-text="msg.paperFigures.length > 1 ? 's' : ''"></span> with figures)
+              </summary>
+              <div class="mt-2 flex flex-wrap gap-3 overflow-x-auto">
+                <template x-for="fig in msg.paperFigures" :key="fig.url">
+                  <div class="text-center flex-shrink-0">
+                    <a :href="fig.url" target="_blank" rel="noopener">
+                      <img :src="fig.url" :alt="`Page ${fig.page}`"
+                           class="h-56 w-auto max-w-xs object-contain bg-white rounded-lg p-1 cursor-zoom-in hover:opacity-90 transition-opacity"
+                           onerror="this.parentElement.parentElement.style.display='none'" />
+                    </a>
+                    <p class="text-xs text-slate-400 mt-1">
+                      <span x-text="fig.filename"></span> · p.<span x-text="fig.page"></span>
+                    </p>
+                  </div>
+                </template>
+              </div>
+            </details>
           </template>
 
           <!-- Tool trace -->
@@ -335,6 +359,7 @@ function chatApp() {
       let toolTrace = [];
       let citations = {};
       let compounds = [];
+      let paperFigures = [];
       let blocked = false;
 
       try {
@@ -382,6 +407,8 @@ function chatApp() {
               citations = JSON.parse(event.content);
             } else if (event.type === 'compounds') {
               compounds = JSON.parse(event.content);
+            } else if (event.type === 'paper_figures') {
+              paperFigures = JSON.parse(event.content);
             } else if (event.type === 'done') {
               break;
             } else if (event.type === 'error') {
@@ -404,6 +431,7 @@ function chatApp() {
           toolTrace: toolTrace.length ? toolTrace : null,
           citations: Object.keys(citations).length ? citations : null,
           compounds: compounds.length ? compounds : null,
+          paperFigures: paperFigures.length ? paperFigures : null,
         };
         this.messages.push(finalMsg);
         this.draftText = '';

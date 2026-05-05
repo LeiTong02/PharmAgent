@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI):
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 _STATIC_DIR = Path(__file__).parent / "static"
+_FIGURES_DIR = Path(__file__).parent.parent / "data" / "figures"
 
 app = FastAPI(title="PharmaRA", lifespan=lifespan)
 
@@ -70,6 +71,10 @@ app.add_middleware(
 # Mount static files
 _STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
+# Mount saved paper figure images (written by loader.py during PDF upload)
+_FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/figures", StaticFiles(directory=str(_FIGURES_DIR)), name="figures")
 
 # Templates (shared across routers via app.state)
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))

@@ -47,9 +47,10 @@ Streamlit UI (app.py, port 8501)          FastAPI UI (frontend/, port 8000)
                            ▼
                   LangGraph StateGraph
                     ├── guardrail_node   → regex check → BLOCK or PASS
-                    ├── agent_node       → Gemini via ChatGoogleGenerativeAI, 4 tools bound
+                    ├── intent_node      → LLM classifies query intent + entities → QueryContext (→ tools.py state)
+                    ├── agent_node       → Gemini via ChatGoogleGenerativeAI, 4 tools bound; strips __VISUAL_CHUNKS__ sentinel
                     └── tool_node        → dispatches to one of 4 tools:
-                            ├── rag_search          → Redis Stack retrieval, returns context + citations
+                            ├── rag_search          → smart_retrieve() (policy-gated); context + __VISUAL_CHUNKS__:<json>
                             ├── query_assay_data    → pandas on assay_results.csv, returns markdown table
                             ├── fetch_github_readme → GitHub API /repos/{owner}/{repo}/readme
                             └── lookup_paper        → Semantic Scholar API → arXiv fallback → stub
@@ -67,19 +68,20 @@ Streamlit UI (app.py, port 8501)          FastAPI UI (frontend/, port 8000)
 
 ---
 
-## Current Implementation Status (as of 2026-05-04)
+## Current Implementation Status (as of 2026-05-05)
 
 ### Shared backend (both frontends)
 
 | File | Status | Notes |
 |---|---|---|
-| `agent/graph.py` | Complete | LangGraph 4-node graph, recursion_limit=10 via invoke config; dual classic/wiki graph |
-| `agent/tools.py` | Complete | 4 @tool functions, all verified |
+| `agent/graph.py` | Complete | 5-node graph (guardrail → intent → agent ↔ tool); LLM-based intent classifier in `intent_node`; `agent_node` strips `__VISUAL_CHUNKS__` sentinel; `recursion_limit=25` |
+| `agent/tools.py` | Complete | `rag_search` uses `smart_retrieve()`; appends `__VISUAL_CHUNKS__:<json>` when visuals approved; 3 other tools unchanged |
 | `agent/guardrails.py` | Complete | 8/8 unit tests pass |
 | `agent/prompts.py` | Complete | System prompt with citation format + safety instructions |
 | `rag/loader.py` | Complete | Parses headers; `load_pdf_bytes()` with 2-pass chunking for PDFs |
 | `rag/vectorstore.py` | Complete | Redis Stack; dual index (`pharma_ra` + `pharma_wiki`); `_FixedGoogleEmbeddings` wrapper |
-| `rag/retriever.py` | Complete | Returns (context_str, citations_list) |
+| `rag/query_parser.py` | Complete | `QueryIntent` enum + `QueryContext` dataclass; `parse_query()` regex fallback; `parse_query_from_llm_output()` for LLM path |
+| `rag/retriever.py` | Complete | `smart_retrieve()` policy-gated (intent/entity/threshold/visual gate); `retrieve()` kept for wiki_search; 72/72 tests passing |
 | `chat/history.py` | Complete | Redis-backed per-user history (load/save/clear) |
 | `chat/token_logger.py` | Complete | Logs per-query token usage to `logs/token_usage.jsonl` |
 | `mcp_server.py` | Complete | FastMCP server exposing 3 tools |
@@ -108,11 +110,12 @@ Streamlit UI (app.py, port 8501)          FastAPI UI (frontend/, port 8000)
 | `frontend/deps.py` | Complete | `get_current_user()`, `require_admin()` |
 | `frontend/db/auth.py` | Complete | SQLite + bcrypt; seeded from `.env` |
 | `frontend/routers/auth_router.py` | Complete | Login/logout |
-| `frontend/routers/chat_router.py` | Complete | SSE streaming, history API, token usage |
+| `frontend/routers/chat_router.py` | Complete | SSE streaming; parses `__VISUAL_CHUNKS__` sentinel; NoneType guard for LangGraph 1.1.9 |
 | `frontend/routers/admin_router.py` | Complete | PDF upload, file listing, admin-gated |
 | `frontend/templates/*.html` | Complete | base, login, chat, admin (Tailwind + Alpine.js) |
-| `tests/test_frontend/` (36 tests) | Complete | All passing; `pytest tests/test_frontend/ -v` |
-| Visual smoke test | **Pending** | Planned 2026-05-05 |
+| `tests/test_frontend/` (36 tests) | Complete | All passing |
+| `tests/test_rag/` (36 tests) | Complete | `test_query_parser.py` + `test_smart_retrieve.py`; all passing |
+| Visual smoke test | Complete | Text RAG verified end-to-end |
 
 ---
 
@@ -180,7 +183,8 @@ pytest tests/test_frontend/ -v
 | Redis index lost (container deleted) | Rebuild with `python scripts/build_index.py` in ~30s |
 | GitHub API rate limit (60 req/hr unauth) | Graceful fallback message; demo needs 1–2 calls max |
 | Semantic Scholar API down | arXiv fallback → stub message; never crashes |
-| LangGraph infinite tool loop | `recursion_limit=10` in `graph.invoke()` config |
+| LangGraph infinite tool loop | `recursion_limit=25` in `graph.stream()` config |
 | Interviewer asks personal medical advice | Guardrail fires visibly — this is a demo feature, not a bug |
+| Paper figure rendering in browser | `approved_visuals` correctly selected by policy; live browser display may have issues — text RAG unaffected |
 | `.env` missing at demo time | `app.py` shows a clear `st.error` setup instruction and `st.stop()` |
 | `tabulate` missing | Added to `requirements.txt`; required by `pandas.DataFrame.to_markdown()` |

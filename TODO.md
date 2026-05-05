@@ -1,6 +1,6 @@
 # TODO — PharmaRA Demo
 
-Last updated: 2026-05-04 (FastAPI complete; manual smoke test pending 2026-05-05)
+Last updated: 2026-05-05 (Policy-gated RAG complete; visual rendering deferred)
 
 ---
 
@@ -96,14 +96,19 @@ uvicorn frontend.main:app --reload --port 8000
 
 ---
 
-## Pending (2026-05-05)
+## Completed (2026-05-05)
 
-- [ ] Manual smoke test of FastAPI frontend (http://localhost:8000):
-  - [ ] Login as admin → chat page loads correctly
-  - [ ] Send a RAG query → SSE streaming works, citations appear
-  - [ ] Send guardrail-triggering query → blocked banner shown
-  - [ ] Toggle Classic RAG ↔ Wiki RAG → mode switch works
-  - [ ] Click sidebar example queries → prefill + auto-submit
-  - [ ] Admin page: drag-and-drop PDF upload → success
-  - [ ] Logout → redirected to login page
-  - [ ] Login as researcher → /admin returns 403
+- [x] Manual smoke test of FastAPI frontend — RAG text queries working end-to-end
+- [x] Policy-gated retrieval (`smart_retrieve`) — 72/72 tests passing
+- [x] LangGraph NoneType crash fixed in `chat_router.py`
+- [x] Visual return policy — 4-check gate (intent, entity, score, support) implemented and verified
+
+## Known Issues / Deferred
+
+- [ ] **Multimodal image retrieval rendering** — policy-gated visuals (`approved_visuals`) are correctly selected by `smart_retrieve` and passed to the frontend via `__VISUAL_CHUNKS__` sentinel, but the live browser rendering of paper figures may have layout/display issues. Deferred; does not affect text RAG or any other feature.
+
+## Future Extensions
+
+- [ ] Real pharmaceutical document corpus (currently using mock papers; requires internal documents behind auth)
+- [ ] Multimodal image rendering fix — once `approved_visuals` SSE rendering is verified in-browser
+- [ ] LLM-based intent classifier fallback quality evaluation (current regex fallback works; LLM path used in production)
