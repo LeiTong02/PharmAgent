@@ -31,7 +31,7 @@ Implemented from scratch:
   - [x] Verify guardrail shows red `st.error` banner (not just text)
   - [x] Click all 7 sidebar example queries — confirm each works without errors
   - [x] Check no crashes or unhandled exceptions (browser console clean)
-- [ ] Prepare 3–4 demo talking points matching each tool to a Sanofi R&D use case — **see DEMO_NOTES.md** *(optional; script ready, can improvise from DEMO_NOTES.md during interview)*
+- [ ] Prepare 3–4 demo talking points matching each tool to a R&D use case — **see DEMO_NOTES.md** *(optional; script ready, can improvise from DEMO_NOTES.md during interview)*
 
 ---
 
@@ -56,7 +56,7 @@ Implemented from scratch:
 - [x] Molecule viewer: PubChem PNG via SMILES; 10 compounds with SMILES in `assay_results.csv`; auto-renders after assay queries *(done 2026-05-03)*
 - [x] Batch embedding refresh: `scripts/watch_docs.py` polls `data/docs/` every 10s, auto-rebuilds both indexes on change *(done 2026-05-03)*
 - [x] Evaluation harness: `scripts/evaluate_rag.py` — keyword-recall scoring on 7 Q&A pairs for Classic vs Wiki RAG *(done 2026-05-03)*
-- [x] Real Sanofi document corpus: intentionally skipped — requires internal documents behind auth; mock papers serve as placeholders
+- [x] Real document corpus: intentionally skipped — requires internal documents behind auth; mock papers serve as placeholders
 - [x] Streaming responses: `graph.stream(stream_mode="updates")` shows real-time tool status ("⚙️ Calling `tool_name`...") while agent executes *(done 2026-05-03)*
 - [x] Cost tracking: `chat/token_logger.py` logs per-query token usage to `logs/token_usage.jsonl`; sidebar "💰 Token usage" expander *(done 2026-05-03)*
 
