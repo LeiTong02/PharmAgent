@@ -14,6 +14,7 @@ import json as _json
 
 from rag.query_parser import QueryContext
 from rag.retriever import retrieve, smart_retrieve
+from mcp_servers.reagent_catalog import search_reagents_impl, check_stock_impl, estimate_cost_impl
 
 _CSV_PATH = Path(__file__).parent.parent / "data" / "assay_results.csv"
 _df: pd.DataFrame | None = None
@@ -87,7 +88,46 @@ def wiki_search(query: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Tool 2: Assay results CSV query
+# Tool 2: Reagent catalog — search, stock check, cost estimate (via MCP server logic)
+# ---------------------------------------------------------------------------
+
+@tool
+def search_reagents(query: str) -> str:
+    """Search the reagent procurement catalog for compounds available for purchase.
+
+    Use this tool when the user asks whether a compound can be bought, ordered, or sourced,
+    or wants pricing, availability, lead time, or supplier information.
+    Accepts compound names (e.g. 'Osimertinib'), internal IDs (e.g. 'SR-0472'),
+    or target names (e.g. 'EGFR inhibitor', 'CDK4').
+    Returns catalog ID, supplier, purity, price/mg, stock status, and lead time.
+    To get a full cost estimate after finding a catalog ID, mention the desired quantity.
+    """
+    q = query.strip()
+
+    # Detect quantity request: "10 mg of HY-15772" or "estimate cost for SML1277 25mg"
+    import re
+    qty_match = re.search(r"(\d+(?:\.\d+)?)\s*mg", q, re.IGNORECASE)
+    cat_match = re.search(r"\b([A-Z]{1,4}-?\d{3,}[A-Z0-9]*|PD\d{7}|PF-\d+)\b", q)
+
+    if qty_match and cat_match:
+        return estimate_cost_impl(cat_match.group(1), float(qty_match.group(1)))
+
+    # Detect stock-check request: "is HY-15772 in stock" / "check stock for SML1277"
+    if cat_match and any(kw in q.lower() for kw in ["stock", "available", "availability", "lead time", "delivery"]):
+        return check_stock_impl(cat_match.group(1))
+
+    # Extract optional target filter (e.g. "EGFR inhibitor")
+    target = ""
+    for tgt in ["EGFR", "BRAF", "CDK4", "CDK6", "ALK", "MEK", "BCR-ABL", "MET"]:
+        if tgt.lower() in q.lower():
+            target = tgt
+            break
+
+    return search_reagents_impl(q, target=target)
+
+
+# ---------------------------------------------------------------------------
+# Tool 3: Assay results CSV query
 # ---------------------------------------------------------------------------
 
 _MONTH_MAP = {

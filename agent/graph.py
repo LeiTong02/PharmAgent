@@ -18,6 +18,7 @@ from agent.tools import (
     lookup_paper,
     query_assay_data,
     rag_search,
+    search_reagents,
     wiki_search,
     set_vectorstore,
     set_wiki_vectorstore,
@@ -181,7 +182,7 @@ def build_graph(vectorstore, wiki_vectorstore=None, mode: str = "classic"):
         set_wiki_vectorstore(wiki_vectorstore)
 
     search_tool = wiki_search if mode == "wiki" else rag_search
-    tools = [search_tool, query_assay_data, fetch_github_readme, lookup_paper]
+    tools = [search_tool, query_assay_data, search_reagents, fetch_github_readme, lookup_paper]
     tool_map = {t.name: t for t in tools}
     llm = _get_llm(tools)
 

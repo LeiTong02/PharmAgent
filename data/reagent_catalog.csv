@@ -1,0 +1,21 @@
+compound_name,compound_id,catalog_id,supplier,cas_number,molecular_weight,target,purity,price_per_mg,min_quantity_mg,in_stock,lead_time_days,notes
+Gefitinib,SR-0101,SML1277,Sigma-Aldrich,184475-35-2,446.9,EGFR,≥98%,0.45,10,True,3,First-generation EGFR TKI
+Erlotinib,SR-0102,E6393,Sigma-Aldrich,183319-69-9,393.4,EGFR,≥98%,0.38,10,True,3,First-generation EGFR TKI
+Afatinib,SR-0103,SML2190,Sigma-Aldrich,439081-18-2,485.9,EGFR,≥98%,0.82,5,True,5,Second-generation irreversible EGFR TKI
+Lapatinib,SR-0104,L4908,Sigma-Aldrich,231277-92-2,581.1,EGFR/HER2,≥98%,0.52,10,True,3,Dual EGFR/HER2 inhibitor
+Osimertinib,SR-0472,HY-15772,MedChemExpress,1421373-65-0,499.6,EGFR L858R/T790M,≥99%,1.20,5,True,5,Third-generation covalent EGFR TKI; C797S-resistant analog
+Rociletinib,SR-0105,HY-15840,MedChemExpress,1374640-70-6,497.9,EGFR T790M,≥98%,1.85,5,False,14,T790M-selective; clinical trial discontinued
+Nazartinib,SR-0106,HY-17409,MedChemExpress,1374046-87-3,508.6,EGFR T790M,≥98%,2.10,5,False,21,Third-generation EGFR TKI
+Vemurafenib,SR-0201,SML2586,Sigma-Aldrich,918504-65-1,489.9,BRAF V600E,≥98%,0.65,10,True,3,BRAF V600E selective inhibitor
+Dabrafenib,SR-0202,HY-14660,MedChemExpress,1195765-45-7,519.6,BRAF V600E,≥98%,0.78,5,True,5,BRAF V600E; less paradoxical pathway activation
+Encorafenib,SR-0203,HY-15605,MedChemExpress,1269440-17-6,540.0,BRAF V600E,≥98%,1.10,5,True,7,Next-gen BRAF inhibitor; longer target residence time
+Sorafenib,SR-0204,S7397,Sigma-Aldrich,284461-73-0,464.8,BRAF/RAF/VEGFR,≥98%,0.32,25,True,3,Multi-kinase inhibitor; oral bioavailable
+Palbociclib,SR-0301,PD0332991,Cayman Chemical,571190-30-2,447.5,CDK4/CDK6,≥98%,0.55,10,True,3,First approved CDK4/6 inhibitor; breast cancer
+Ribociclib,SR-0302,HY-15777,MedChemExpress,1211441-98-3,434.5,CDK4/CDK6,≥99%,0.92,5,True,5,CDK4/6 inhibitor; HR+ breast cancer
+Abemaciclib,SR-0303,HY-16297,MedChemExpress,1231929-97-7,506.6,CDK4/CDK6,≥99%,1.05,5,True,7,CDK4/6 inhibitor; continuous dosing schedule
+Dinaciclib,SR-0304,S2768,Selleck Chemicals,779353-01-4,395.5,CDK4/CDK2/CDK1,≥99%,0.88,5,False,14,Pan-CDK inhibitor; in preclinical development
+Imatinib,SR-0401,SML1027,Sigma-Aldrich,152459-95-5,493.6,BCR-ABL/KIT/PDGFR,≥98%,0.28,25,True,2,First BCR-ABL inhibitor; CML standard of care
+Dasatinib,SR-0402,D3069,Sigma-Aldrich,302962-49-8,488.0,BCR-ABL/SRC,≥98%,0.42,10,True,3,Second-generation; dual SRC/ABL inhibitor
+Crizotinib,SR-0501,PF-02341066,Cayman Chemical,877399-52-5,450.3,ALK/MET/ROS1,≥99%,0.75,10,True,5,First-generation ALK inhibitor
+Lorlatinib,SR-0503,HY-19620,MedChemExpress,1454846-35-5,406.4,ALK/ROS1,≥99%,1.55,5,True,7,Third-generation ALK inhibitor; CNS penetrant
+Trametinib,SR-0601,HY-10999,MedChemExpress,871700-17-3,615.4,MEK1/MEK2,≥99%,0.95,5,True,5,MEK1/2 inhibitor; approved with BRAF V600E combo
