@@ -1,19 +1,37 @@
+import logging
 import os
+import struct as _struct
+import uuid as _uuid
+
 import redis as _redis
 from langchain_openai import OpenAIEmbeddings
 from langchain_redis import RedisVectorStore, RedisConfig
+
+logger = logging.getLogger(__name__)
 
 INDEX_NAME = "pharma_ra"
 WIKI_INDEX_NAME = "pharma_wiki"
 
 _METADATA_SCHEMA = [
-    {"name": "title", "type": "text"},
-    {"name": "authors", "type": "text"},
-    {"name": "year", "type": "text"},
-    {"name": "journal", "type": "text"},
-    {"name": "source_file", "type": "text"},
-    {"name": "source_type", "type": "text"},
-    {"name": "upload_timestamp", "type": "text"},
+    {"name": "title",             "type": "text"},
+    {"name": "authors",           "type": "text"},
+    {"name": "year",              "type": "text"},
+    {"name": "journal",           "type": "text"},
+    {"name": "source_file",       "type": "text"},
+    {"name": "source_type",       "type": "text"},
+    {"name": "upload_timestamp",  "type": "text"},
+    # P1/P2 fields
+    {"name": "document_id",       "type": "text"},
+    {"name": "chunk_type",        "type": "text"},
+    {"name": "extraction_method", "type": "text"},
+    {"name": "embedding_modality","type": "text"},
+    {"name": "page_number",       "type": "numeric"},
+    {"name": "figure_index",      "type": "text"},
+    {"name": "caption",           "type": "text"},
+    {"name": "nearby_text",       "type": "text"},
+    {"name": "image_path",        "type": "text"},
+    {"name": "figure_url",        "type": "text"},
+    {"name": "section",           "type": "text"},
 ]
 
 
@@ -36,6 +54,54 @@ class _FixedGoogleEmbeddings:
 
     def embed_query(self, text: str) -> list[float]:
         return self._inner.embed_query(text)
+
+
+class MultimodalGoogleEmbeddings:
+    """
+    Calls google.generativeai.embed_content directly, supporting text and (optionally) image.
+
+    Image embedding falls back to caption text embedding if the model rejects image input,
+    so indexing never fails due to embedding errors.
+    """
+
+    def __init__(self, model: str, api_key: str):
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        self._genai = genai
+        self.model = model if model.startswith("models/") else f"models/{model}"
+        self._text_dim: int | None = None  # cached after first text embed
+
+    def embed_image(self, png_bytes: bytes) -> list[float] | None:
+        """Embed a PNG image. Returns None if the model rejects image input."""
+        import base64
+        try:
+            result = self._genai.embed_content(
+                model=self.model,
+                content={"parts": [{"inline_data": {
+                    "mime_type": "image/png",
+                    "data": base64.b64encode(png_bytes).decode(),
+                }}]},
+            )
+            vec = result.get("embedding") or []
+            # Verify dimension consistency with text embeddings
+            if self._text_dim and len(vec) != self._text_dim:
+                logger.warning(
+                    "Image embedding dim %d ≠ text dim %d; discarding", len(vec), self._text_dim
+                )
+                return None
+            return list(vec)
+        except Exception as exc:
+            logger.warning("Image embedding failed (caption fallback will be used): %s", exc)
+            return None
+
+    def embed_query(self, text: str) -> list[float]:
+        result = self._genai.embed_content(model=self.model, content=text)
+        vec = list(result["embedding"])
+        self._text_dim = len(vec)
+        return vec
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self.embed_query(t) for t in texts]
 
 
 def _get_embeddings():
@@ -120,6 +186,82 @@ def add_wiki_documents(docs) -> int:
     vs = load_wiki_index()
     vs.add_documents(docs)
     return len(docs)
+
+
+def add_image_documents(image_doc_tuples: list[tuple]) -> int:
+    """
+    Embed PNG images with gemini-embedding-2 and store directly in the pharma_ra Redis index.
+
+    Uses MultimodalGoogleEmbeddings.embed_image().  If the model rejects the image, falls back
+    to embedding the caption/nearby_text as text so the chunk is still retrievable.
+    Only runs when OPENAI_BASE_URL contains "google"; returns 0 otherwise.
+
+    image_doc_tuples: [(Document, png_bytes), ...]  from load_pdf_bytes()
+    """
+    base_url = os.getenv("OPENAI_BASE_URL", "")
+    if "google" not in base_url.lower():
+        logger.warning("add_image_documents: non-Google backend; skipping image embedding.")
+        return 0
+
+    if not image_doc_tuples:
+        return 0
+
+    model = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-2")
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    emb = MultimodalGoogleEmbeddings(model=model, api_key=api_key)
+    r = _redis.from_url(_get_redis_url())
+
+    # Probe text embedding dimension so we can validate image vectors
+    try:
+        probe = emb.embed_query("probe")
+        text_dim = len(probe)
+    except Exception as exc:
+        logger.error("add_image_documents: cannot determine embedding dimension: %s", exc)
+        return 0
+
+    stored = 0
+    for doc, png_bytes in image_doc_tuples:
+        vector: list[float] | None = emb.embed_image(png_bytes)
+
+        if vector is None:
+            # Fallback: embed caption or nearby_text as a text vector
+            fallback_text = (
+                doc.metadata.get("caption")
+                or doc.metadata.get("nearby_text")
+                or doc.page_content
+            )
+            try:
+                vector = emb.embed_query(fallback_text)
+                doc.metadata["embedding_modality"] = "text_fallback"
+            except Exception as exc:
+                logger.warning(
+                    "add_image_documents: both image and text fallback failed for %s: %s",
+                    doc.metadata.get("image_path", "?"), exc,
+                )
+                continue
+
+        if len(vector) != text_dim:
+            logger.warning(
+                "add_image_documents: dim mismatch %d vs %d, skipping %s",
+                len(vector), text_dim, doc.metadata.get("image_path", "?"),
+            )
+            continue
+
+        # Pack as float32 binary blob — matches LangChain-Redis internal format
+        vec_bytes = _struct.pack(f"{len(vector)}f", *vector)
+        key = f"{INDEX_NAME}:{_uuid.uuid4().hex}"
+
+        mapping: dict = {"content": doc.page_content, "content_vector": vec_bytes}
+        for field_def in _METADATA_SCHEMA:
+            fname = field_def["name"]
+            val = doc.metadata.get(fname, "")
+            mapping[fname] = str(val) if val is not None else ""
+
+        r.hset(key, mapping=mapping)
+        stored += 1
+
+    logger.info("add_image_documents: stored %d vectors (text_dim=%d) in %s", stored, text_dim, INDEX_NAME)
+    return stored
 
 
 def list_uploaded_files() -> list[str]:

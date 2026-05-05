@@ -17,3 +17,17 @@ tiktoken==0.12.0
 tabulate==0.10.0
 fastmcp==3.2.4
 mcp==1.27.0
+# FastAPI web frontend
+fastapi>=0.115
+uvicorn[standard]>=0.30
+jinja2>=3.1
+python-multipart>=0.0.9
+aiosqlite>=0.20
+# passlib replaced by direct bcrypt usage (bcrypt==5.0.0 already in deps)
+itsdangerous>=2.1
+sse-starlette>=2.1
+pydantic-settings>=2.0
+# Testing
+httpx>=0.27
+pytest>=8.0
+pytest-asyncio>=0.23

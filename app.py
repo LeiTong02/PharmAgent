@@ -316,9 +316,11 @@ if user_input:
 
         try:
             for event in graph.stream(
-                state_in, stream_mode="updates", config={"recursion_limit": 10}
+                state_in, stream_mode="updates", config={"recursion_limit": 25}
             ):
                 for node, update in event.items():
+                    if update is None:
+                        continue
                     msgs = update.get("messages", [])
 
                     if node == "guardrail_node":
@@ -335,9 +337,10 @@ if user_input:
                                     tool_traces.append((tc["name"], tc.get("args", {})))
                                     _tool_status.caption(f"⚙️ Calling `{tc['name']}`...")
                             elif isinstance(m, AIMessage) and not m.tool_calls:
+                                meta = m.response_metadata or {}
                                 usage = (
-                                    m.response_metadata.get("token_usage")
-                                    or m.response_metadata.get("usage_metadata")
+                                    meta.get("token_usage")
+                                    or meta.get("usage_metadata")
                                     or {}
                                 )
                                 if usage:

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Admin Upload{% endblock %}
+
+{% block sidebar %}
+<div class="mt-2 space-y-3">
+  <p class="text-xs text-slate-500 px-1 leading-relaxed">Upload PDF documents to add them to the RAG knowledge base. Both Classic and Wiki indexes are updated automatically.</p>
+  <div class="px-1">
+    <div class="text-xs text-slate-400 font-medium mb-1">Supported formats</div>
+    <div class="flex gap-2 flex-wrap">
+      <span class="text-xs px-2 py-0.5 bg-navy-600 border border-navy-500 rounded text-slate-300">PDF</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-screen" x-data="adminApp()" x-init="init()">
+  <!-- Header -->
+  <header class="flex-none flex items-center px-6 py-3.5 border-b border-navy-500 bg-navy-700/50 backdrop-blur">
+    <h1 class="text-base font-semibold text-white">Admin — Document Upload</h1>
+    <span class="ml-3 text-xs px-2 py-0.5 rounded-full border border-amber-500/40 text-amber-400 bg-amber-500/10">Admin only</span>
+  </header>
+
+  <div class="flex-1 overflow-y-auto px-6 py-6 max-w-3xl space-y-8">
+
+    <!-- Upload zone -->
+    <section>
+      <h2 class="text-sm font-semibold text-white mb-3">Upload PDF</h2>
+      <div
+        class="border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer"
+        :class="dragOver ? 'border-accent bg-accent/5' : 'border-navy-500 hover:border-navy-400'"
+        @dragover.prevent="dragOver = true"
+        @dragleave="dragOver = false"
+        @drop.prevent="handleDrop($event)"
+        @click="$refs.fileInput.click()"
+      >
+        <input x-ref="fileInput" type="file" accept=".pdf" class="hidden" @change="handleFile($event.target.files[0])" />
+        <svg class="w-10 h-10 text-slate-500 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+        </svg>
+        <p class="text-sm text-slate-300 font-medium mb-1">Drop a PDF here or click to browse</p>
+        <p class="text-xs text-slate-500">Maximum file size: 50 MB</p>
+      </div>
+
+      <!-- File ready to upload -->
+      <template x-if="selectedFile">
+        <div class="mt-3 flex items-center justify-between bg-navy-700 border border-navy-500 rounded-xl px-4 py-3">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+              <p class="text-sm text-white font-medium" x-text="selectedFile.name"></p>
+              <p class="text-xs text-slate-400" x-text="formatSize(selectedFile.size)"></p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button @click="selectedFile = null" class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded hover:bg-navy-600 transition-colors">Remove</button>
+            <button @click="upload()" :disabled="uploading"
+                    class="text-xs px-3 py-1.5 bg-accent hover:bg-accent-dark disabled:opacity-50 text-navy-800 font-semibold rounded-lg transition-colors">
+              <span x-show="!uploading">Upload &amp; Index</span>
+              <span x-show="uploading" class="flex items-center gap-1.5">
+                <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                Indexing…
+              </span>
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Upload result -->
+      <template x-if="uploadResult">
+        <div class="mt-3 px-4 py-3 rounded-xl border text-sm"
+             :class="uploadResult.ok ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'">
+          <template x-if="uploadResult.ok">
+            <div>
+              <p class="font-medium">✓ Uploaded successfully</p>
+              <p class="text-xs mt-1 text-emerald-300/80">
+                <span x-text="uploadResult.filename"></span> —
+                <span x-text="uploadResult.chunks"></span> classic chunks,
+                <span x-text="uploadResult.wiki_pages"></span> wiki pages indexed
+              </p>
+            </div>
+          </template>
+          <template x-if="!uploadResult.ok">
+            <p x-text="uploadResult.error"></p>
+          </template>
+        </div>
+      </template>
+    </section>
+
+    <!-- Uploaded files list -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-white">Indexed Documents</h2>
+        <button @click="refreshFiles()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors">
+          <svg class="w-3.5 h-3.5" :class="loadingFiles ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      <template x-if="uploadedFiles.length === 0">
+        <div class="text-sm text-slate-500 py-6 text-center border border-navy-500 rounded-xl">No uploaded documents yet</div>
+      </template>
+
+      <template x-if="uploadedFiles.length > 0">
+        <div class="border border-navy-500 rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-navy-600/50 text-slate-400 text-xs uppercase tracking-wide">
+                <th class="text-left px-4 py-2.5">Filename</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(f, i) in uploadedFiles" :key="i">
+                <tr class="border-t border-navy-500 hover:bg-navy-600/30 transition-colors">
+                  <td class="px-4 py-2.5 font-mono text-xs text-slate-300" x-text="f"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </section>
+  </div>
+</div>
+
+<script>
+function adminApp() {
+  return {
+    selectedFile: null,
+    uploading: false,
+    uploadResult: null,
+    dragOver: false,
+    uploadedFiles: {{ uploaded_files | tojson }},
+    loadingFiles: false,
+
+    init() {},
+
+    handleDrop(e) {
+      this.dragOver = false;
+      const f = e.dataTransfer.files[0];
+      if (f) this.handleFile(f);
+    },
+
+    handleFile(f) {
+      if (!f) return;
+      if (!f.name.toLowerCase().endsWith('.pdf')) {
+        alert('Only PDF files are supported.');
+        return;
+      }
+      this.selectedFile = f;
+      this.uploadResult = null;
+    },
+
+    formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    },
+
+    async upload() {
+      if (!this.selectedFile || this.uploading) return;
+      this.uploading = true;
+      this.uploadResult = null;
+
+      const fd = new FormData();
+      fd.append('file', this.selectedFile);
+
+      try {
+        const resp = await fetch('/admin/upload', { method: 'POST', body: fd });
+        const data = await resp.json();
+        if (resp.ok) {
+          this.uploadResult = { ok: true, ...data };
+          this.selectedFile = null;
+          await this.refreshFiles();
+        } else {
+          this.uploadResult = { ok: false, error: data.detail || 'Upload failed' };
+        }
+      } catch (err) {
+        this.uploadResult = { ok: false, error: 'Network error: ' + err.message };
+      } finally {
+        this.uploading = false;
+      }
+    },
+
+    async refreshFiles() {
+      this.loadingFiles = true;
+      try {
+        const resp = await fetch('/admin/files');
+        const data = await resp.json();
+        this.uploadedFiles = data.files || [];
+      } catch {}
+      this.loadingFiles = false;
+    },
+  };
+}
+</script>
+{% endblock %}

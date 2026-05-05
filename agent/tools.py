@@ -10,7 +10,10 @@ import pandas as pd
 import requests
 from langchain_core.tools import tool
 
-from rag.retriever import retrieve
+import json as _json
+
+from rag.query_parser import QueryContext
+from rag.retriever import retrieve, smart_retrieve
 
 _CSV_PATH = Path(__file__).parent.parent / "data" / "assay_results.csv"
 _df: pd.DataFrame | None = None
@@ -18,6 +21,7 @@ _df: pd.DataFrame | None = None
 # Injected by graph.py after vectorstore is loaded
 _vectorstore = None
 _wiki_vectorstore = None
+_current_query_context: QueryContext | None = None  # set by intent_node before each tool call
 
 
 def set_vectorstore(vs) -> None:
@@ -28,6 +32,11 @@ def set_vectorstore(vs) -> None:
 def set_wiki_vectorstore(vs) -> None:
     global _wiki_vectorstore
     _wiki_vectorstore = vs
+
+
+def set_current_query_context(qctx: QueryContext | None) -> None:
+    global _current_query_context
+    _current_query_context = qctx
 
 
 def _get_df() -> pd.DataFrame:
@@ -50,9 +59,12 @@ def rag_search(query: str) -> str:
     """
     if _vectorstore is None:
         return "Vector store not initialized. Please restart the application."
-    context, citations = retrieve(_vectorstore, query, k=4)
+    context, citations, visuals = smart_retrieve(_vectorstore, query, k=12, qctx=_current_query_context)
     citation_list = "\n".join(f"  - {c}" for c in citations)
-    return f"{context}\n\n**Sources retrieved:**\n{citation_list}"
+    output = f"{context}\n\n**Sources retrieved:**\n{citation_list}"
+    if visuals:
+        output += f"\n__VISUAL_CHUNKS__:{_json.dumps(visuals)}"
+    return output
 
 
 # ---------------------------------------------------------------------------
