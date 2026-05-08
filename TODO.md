@@ -1,6 +1,6 @@
 # TODO — PharmaRA Demo
 
-Last updated: 2026-05-05 (Policy-gated RAG complete; visual rendering deferred)
+Last updated: 2026-05-08 (Paper figure display fields corrected)
 
 ---
 
@@ -105,7 +105,8 @@ uvicorn frontend.main:app --reload --port 8000
 
 ## Known Issues / Deferred
 
-- [ ] **Multimodal image retrieval rendering** — policy-gated visuals (`approved_visuals`) are correctly selected by `smart_retrieve` and passed to the frontend via `__VISUAL_CHUNKS__` sentinel, but the live browser rendering of paper figures may have layout/display issues. Deferred; does not affect text RAG or any other feature.
+- [x] **Paper figure display fields fixed** — `_to_visual_dict` now includes `page_number`; `chat.html` updated to use `fig.figure_index` / `fig.page_number` / `fig.caption` (was referencing non-existent `fig.page`). *(done 2026-05-08)*
+- [ ] **Multimodal image retrieval rendering** — end-to-end browser test with real PDFs pending; text RAG and all other features unaffected.
 
 ## Future Extensions
 

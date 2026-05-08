@@ -112,6 +112,7 @@ def _to_visual_dict(doc: Document) -> dict:
         "url": figure_url,
         "filename": source_file,
         "figure_index": m.get("figure_index", ""),
+        "page_number": m.get("page_number", 0),
         "caption": m.get("caption", ""),
         "chunk_type": m.get("chunk_type", ""),
     }

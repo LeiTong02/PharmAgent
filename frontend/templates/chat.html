@@ -162,15 +162,20 @@
               </summary>
               <div class="mt-2 flex flex-wrap gap-3 overflow-x-auto">
                 <template x-for="fig in msg.paperFigures" :key="fig.url">
-                  <div class="text-center flex-shrink-0">
+                  <div class="text-center flex-shrink-0 max-w-xs">
                     <a :href="fig.url" target="_blank" rel="noopener">
-                      <img :src="fig.url" :alt="`Page ${fig.page}`"
+                      <img :src="fig.url" :alt="fig.caption || `Figure ${fig.figure_index}`"
                            class="h-56 w-auto max-w-xs object-contain bg-white rounded-lg p-1 cursor-zoom-in hover:opacity-90 transition-opacity"
                            onerror="this.parentElement.parentElement.style.display='none'" />
                     </a>
                     <p class="text-xs text-slate-400 mt-1">
-                      <span x-text="fig.filename"></span> · p.<span x-text="fig.page"></span>
+                      <span x-text="fig.filename"></span>
+                      <template x-if="fig.figure_index"> · Fig <span x-text="fig.figure_index"></span></template>
+                      <template x-if="!fig.figure_index && fig.page_number"> · p.<span x-text="fig.page_number"></span></template>
                     </p>
+                    <template x-if="fig.caption">
+                      <p class="text-xs text-slate-500 mt-0.5 leading-snug max-w-xs" x-text="fig.caption"></p>
+                    </template>
                   </div>
                 </template>
               </div>
